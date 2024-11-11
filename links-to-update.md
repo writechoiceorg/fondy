@@ -3,3 +3,4 @@
 Parameters:
 
 - server_callback_url
+- currency
