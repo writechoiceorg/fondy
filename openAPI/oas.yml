@@ -19,7 +19,7 @@ paths:
               $ref: '#/components/schemas/CheckoutUrlRequest'
       responses:
         '200':
-          description: "Different responses for successful transactions, in-progress transactions, or errors."
+          description: "Different responses for successful transactions, interim transactions, or errors."
           content:
             application/json:
               schema:
