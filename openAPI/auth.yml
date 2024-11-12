@@ -15,7 +15,7 @@ paths:
       description: |
         This endpoint generates an access token for the application by sending a POST request with 
         the required parameters. The parameters include the `application_id`, `date`, and `signature`. 
-        Refer to FONDY support to obtain the necessary `application_id` and secret key.
+        Refer to Fondy support to obtain the necessary `application_id` and secret key.
       requestBody:
         required: true
         content:
@@ -57,7 +57,7 @@ components:
         application_id:
           type: string
           maxLength: 20
-          description: "Company ID. Contact FONDY support to obtain the ID and secret key."
+          description: "Company ID. Contact Fondy support to obtain the ID and secret key."
           example: "1234"
         date:
           type: string

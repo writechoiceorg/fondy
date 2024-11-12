@@ -56,7 +56,7 @@ components:
         merchant_id:
           type: integer
           maxLength: 12
-          description: "Unique ID assigned to the merchant by FONDY."
+          description: "Unique ID assigned to the merchant by Fondy."
           example: 1396424
         report_id:
           type: integer
