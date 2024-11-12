@@ -10,6 +10,7 @@ paths:
   /authorizer/token/application/get:
     post:
       summary: Generate Access Token
+      operationId: generate-access-token
       tags: 
       - Auth
       description: |

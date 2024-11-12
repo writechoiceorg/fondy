@@ -10,6 +10,7 @@ paths:
   /extend/company/report/:
     post:
       summary: Retrieve Report Data
+      operationId: get-report-data
       tags: 
       - Reports
       description: |

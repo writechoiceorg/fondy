@@ -11,6 +11,7 @@ paths:
     post:
       tags:
       - Accept Payment
+      operationId: accept-purchase
       summary: Accept Purchase
       description: This endpoint facilitates accepting payments via a hosted payment page. Merchants can use it to initiate a purchase process where customers are redirected to a secure payment page managed by Fondy. The hosted page simplifies compliance and security by handling the sensitive payment processing tasks, while allowing merchants to collect payments seamlessly. 
       parameters:
@@ -99,6 +100,7 @@ paths:
   /3dsecure_step1:
     post:
       summary: Enroll Card in 3DSecure Service
+      operationId: enroll-card-3ds
       tags:
       - Accept Payment 3DS
       description: |
@@ -120,7 +122,8 @@ paths:
                 $ref: '#/components/schemas/ThreeDSecureStep1Response'
   /3dsecure_step2:
     post:
-      summary: Complete 3DSecure Payment
+      summary: Accept 3DSecure Payment
+      operationId: accept-3ds-payment
       tags:
       - Accept Payment 3DS
       description: |
@@ -205,6 +208,7 @@ paths:
   /status/order_id:
     post:
       summary: Check Order Status
+      operationId: check-order-status
       tags:
       - Orders
       description: |
@@ -234,6 +238,7 @@ paths:
   /reverse/order_id:
     post:
       summary: Order Reversal
+      operationId: order-reversal
       tags:
       - Orders
       description: |
@@ -263,6 +268,7 @@ paths:
   /api/transaction_list/:
     post:
       summary: Transaction List by Order
+      operationId: transaction-list-by-order
       tags:
       - Orders
       description: |
@@ -282,7 +288,8 @@ paths:
                 $ref: '#/components/schemas/TransactionListResponse'
   /api/recurring:
     post:
-      summary: Purchase Using Card Token
+      summary: Purchase with Card Token
+      operationId: purchase-with-card-token
       tags: 
       - Recurring Payment
       description: |
@@ -329,6 +336,7 @@ paths:
   /api/checkout/redirect/:
     post:
       summary: Card Verification
+      operationId: card-verification
       tags:
       - Card
       description: |
@@ -377,6 +385,7 @@ paths:
       tags:
         - Card
       summary: P2P Card Credit
+      operationId: p2p-card-credit
       description: |
         This endpoint allows a merchant to perform a peer-to-peer (P2P) card credit transaction, transferring funds directly to a recipient's card number or a stored receiver token. The request must include either `receiver_card_number` or `receiver_rectoken`, along with transaction details such as `order_id`, `order_desc`, and `amount`.
 
@@ -425,6 +434,7 @@ paths:
       tags:
         - Capture Pre-Purchase
       summary: Capture Pre-Authorized Payment
+      operationId: capture-pre-auth-payment
       description: |
         This endpoint allows a merchant to capture a previously pre-authorized amount on a card. The capture operation is the second stage in a two-stage payment scheme, where the initial amount was held during a pre-authorization request (`preauth = Y`). This capture can be a full or partial capture of the amount.
 
