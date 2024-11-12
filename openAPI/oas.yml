@@ -7,10 +7,14 @@ servers:
   - url: https://pay.fondy.eu/api
     description: Production server
 paths:
-  /checkout/url/:
+  /checkout/url:
     post:
+      tags:
+      - Accept Payment
       summary: Accept Purchase
-      description: Accept purchase (hosted payment page)
+      description: This endpoint facilitates accepting payments via a hosted payment page. Merchants can use it to initiate a purchase process where customers are redirected to a secure payment page managed by FONDY. The hosted page simplifies compliance and security by handling the sensitive payment processing tasks, while allowing merchants to collect payments seamlessly. 
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
       requestBody:
         required: true
         content:
@@ -86,14 +90,411 @@ paths:
                     response_status: "success"
                     checkout_url: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
                     payment_id: 123456789012345
-                error:
-                  summary: "Error Response"
+        '400':
+          description: "Error response with details."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /3dsecure_step1:
+    post:
+      summary: Enroll Card in 3DSecure Service
+      tags:
+      - Accept Payment 3DS
+      description: |
+        This endpoint enables PCIDSS-compliant merchants to enroll a card in the 3DSecure service. By enrolling the card, the merchant initiates the 3DSecure verification process, adding an extra layer of authentication for online purchases. This service is only available to merchants who comply with PCI DSS (Payment Card Industry Data Security Standard) requirements.
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreeDSecureStep1Request'
+      responses:
+        '200':
+          description: "Card enrolled in 3DSecure service"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreeDSecureStep1Response'
+  /3dsecure_step2:
+    post:
+      summary: Complete 3DSecure Payment
+      tags:
+      - Accept Payment 3DS
+      description: |
+        This endpoint is used to complete the 3DSecure payment process. Merchants should send the parameters received in the response from Step 1, along with additional required information, to finalize the 3DSecure enrollment with FONDY.
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreeDSecureStep2Request'
+      responses:
+        '200':
+          description: "3DSecure payment completed successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptPurchaseFinalResponse'
+              examples:
+                final:
+                  summary: "Success Response"
                   value:
-                    response_status: "failure"
-                    error_code: 1001
-                    error_message: "Insufficient funds in account."
+                    order_id: "ID1234"
+                    merchant_id: 1
+                    amount: 1020
+                    currency: "EUR"
+                    order_status: "approved"
+                    response_status: "success"
+                    signature: "1773cf135bd89656131134b98637894dad42f808"
+                    tran_type: "purchase"
+                    sender_cell_phone: "+1234567890"
+                    sender_account: "customer_account"
+                    masked_card: "444444XXXXXX5555"
+                    card_bin: 444444
+                    card_type: "VISA"
+                    rrn: "123456789"
+                    approval_code: "654321"
+                    response_code: 100
+                    response_description: "Transaction approved"
+                    reversal_amount: 0
+                    settlement_amount: 1020
+                    settlement_currency: "EUR"
+                    order_time: "21.12.2014 11:21:30"
+                    settlement_date: "21.12.2014"
+                    eci: 5
+                    fee: 10
+                    payment_system: "card"
+                    sender_email: "customer@example.com"
+                    payment_id: 123456789012345
+                    actual_amount: 1020
+                    actual_currency: "EUR"
+                    product_id: "hotel_booking_1234"
+                    merchant_data: "custom_data"
+                    verification_status: "verified"
+                    rectoken: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                    rectoken_lifetime: "01.01.2018 00:00:00"
+                    additional_info:
+                      bank_name: "Some bank in US country"
+                      bank_country: "US"
+                      bank_response_code: "decln_1000"
+                      card_product: "DEBIT"
+                      card_category: "CLASSIC"
+                      settlement_fee: 0.2
+                      capture_status: "captured"
+                      client_fee: 0.3
+                      ipaddress_v4: "8.8.8.8"
+                      capture_amount: 200
+                      card_type: "VISA"
+                      reservation_data: null
+                      bank_response_description: "General decline"
+                      transaction_id: 1058755083
+                      timeend: "10.01.2018 11:21:30"
+                      card_number: "4444555566661111"
+                      payment_method: "apple"
+        '400':
+          description: "Error response with details."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /status/order_id:
+    post:
+      summary: Check Order Status
+      tags:
+      - Orders
+      description: |
+        This endpoint allows merchants to check the current status of an order through a host-to-host request. 
+        The request can be made in JSON, XML, or HTML FORM format, and the response will be returned in the same format as the request. 
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckStatusRequest'
+      responses:
+        '200':
+          description: "Order status response in the requested format (JSON, XML, or HTML FORM)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptPurchaseFinalResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/AcceptPurchaseFinalResponse'
+            text/html:
+              schema:
+                $ref: '#/components/schemas/AcceptPurchaseFinalResponse'
+  /reverse/order_id:
+    post:
+      summary: Order Reversal
+      tags:
+      - Orders
+      description: |
+        This endpoint allows merchants to reverse an order by sending a host-to-host request. 
+        The request can be made in JSON, XML, or HTML FORM format, and the response will be returned in the same format.
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderReversalRequest'
+      responses:
+        '200':
+          description: "Order reversal response in the requested format (JSON, XML, or HTML FORM)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderReversalResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/OrderReversalResponse'
+            text/html:
+              schema:
+                $ref: '#/components/schemas/OrderReversalResponse'
+  /api/transaction_list/:
+    post:
+      summary: Transaction List by Order
+      tags:
+      - Orders
+      description: |
+        Retrieves a list of transactions for a specified order ID. The request must include the `merchant_id`, `order_id`, and `signature` parameters to verify the request's authenticity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionListRequest'
+      responses:
+        '200':
+          description: "List of transactions for the specified order."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+  /api/recurring:
+    post:
+      summary: Purchase Using Card Token
+      tags: 
+      - Recurring Payment
+      description: |
+        This endpoint allows merchants to perform purchases using a stored card token. Additional parameter `rectoken` must be included.The request can be sent in JSON, XML, or HTML form format, and the response will match the request format.
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardTokenPurchaseRequest'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/CardTokenPurchaseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CardTokenPurchaseRequest'
+      responses:
+        '200':
+          description: "Successful purchase response."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardTokenPurchaseResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CardTokenPurchaseResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/CardTokenPurchaseResponse'
+        '400':
+          description: "Error response with details."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/checkout/redirect/:
+    post:
+      summary: Card Verification
+      tags:
+      - Card
+      description: |
+        This endpoint is used for card verification requests, which are generated by the merchant. The host-to-host request can be sent in HTML FORM, XML, or JSON format, and the response is always returned in the same content type as the request.
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardVerificationRequest'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/CardVerificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CardVerificationRequest'
+        required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardVerificationResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CardVerificationResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/CardVerificationResponse'
+        '400':
+          description: Error Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /p2pcredit:
+    post:
+      tags:
+        - Card
+      summary: P2P Card Credit
+      description: |
+        This endpoint allows a merchant to perform a peer-to-peer (P2P) card credit transaction, transferring funds directly to a recipient's card number or a stored receiver token. The request must include either `receiver_card_number` or `receiver_rectoken`, along with transaction details such as `order_id`, `order_desc`, and `amount`.
+
+        To secure this request, the merchant must generate a signature using their Credit private key specifically for `p2pcredit` operations.
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/P2pCreditRequest'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/P2pCreditRequest'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/P2pCreditRequest'
+          required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardVerificationResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CardVerificationResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/CardVerificationResponse'
+        '400':
+          description: Error Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /capture/order_id:
+    post:
+      tags:
+        - Capture Pre-Purchase
+      summary: Capture Pre-Authorized Payment
+      description: |
+        This endpoint allows a merchant to capture a previously pre-authorized amount on a card. The capture operation is the second stage in a two-stage payment scheme, where the initial amount was held during a pre-authorization request (`preauth = Y`). This capture can be a full or partial capture of the amount.
+
+        > 📘 Note
+        > This operation applies only to card payments. If capture is not completed, only a reversal of the full held amount is available.
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapturePrePurchaseRequest'
+      responses:
+        '200':
+          description: Successful capture response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapturePrePurchaseResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CapturePrePurchaseResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/CapturePrePurchaseResponse'
+        '400':
+          description: Error Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+            application/x-www-form-urlencoded:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
+  parameters:
+    ContentType:
+      in: header
+      name: Content-Type
+      required: true
+      schema:
+        type: string
+        enum:
+          - application/json
+          - application/xml
+          - application/x-www-form-urlencoded
+      description: Specifies the format for the request. Response will be in the same format.
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            response_status:
+              type: string
+              description: "Status indicating failure."
+              example: "failure"
+            error_message:
+              type: string
+              description: "Description of the error encountered."
+              example: "General decline"
+            error_code:
+              type: integer
+              description: "Error code for the failure."
+              example: 1000
     AcceptPurchaseRequest:
       type: object
       required:
@@ -120,10 +521,7 @@ components:
           description: "Description of the order in UTF-8 encoding."
           example: "Hotel booking №1234 Antalya Resort"
         signature:
-          type: string
-          maxLength: 40
-          description: "Signature for request verification, generated according to FONDY’s algorithm. Required to verify merchant request consistency and authenticity."
-          example: "1773cf135bd89656131134b98637894dad42f808"
+          $ref: '#/components/schemas/Signature'
         amount:
           type: integer
           maxLength: 12
@@ -147,10 +545,7 @@ components:
           description: "URL where customer is redirected after payment completion."
           example: "http://site.com/responseurl"
         server_callback_url:
-          type: string
-          maxLength: 2048
-          description: "URL for server-to-server callback post payment. See [Receiving Callbacks](https://docs.fondy.eu/en/docs/page/28/) for more details on callbacks."
-          example: "http://site.com/callbackurl"
+          $ref: '#/components/schemas/ServerCallbackUrl'
         payment_systems:
           type: string
           maxLength: 1024
@@ -182,17 +577,7 @@ components:
           maxLength: 2048
           description: "Any data the merchant wants to receive in response callbacks and reports."
         preauth:
-          type: string
-          maxLength: 1
-          description: "Preauthorization parameter for Visa/MasterCard payments to determine the timing of the charge."
-          enum:
-            - Y  # Hold amount
-            - N  # Immediate debit
-          x-enumDescriptions:
-            Y: "The amount is held on the customer’s card and not charged until the merchant sends a **capture** request to confirm."
-            N: "The amount is debited from the customer’s card immediately and settled to the merchant account, in accordance with settlement rules."
-          default: N
-          example: "N"
+          $ref: '#/components/schemas/Preauth'
         sender_email:
           type: string
           maxLength: 254
@@ -213,38 +598,7 @@ components:
             N: "If the payment is declined, the customer will be redirected to recreate the order. Only one callback will be sent to `server_callback_url`."
           default: Y
         lang:
-          type: string
-          maxLength: 2
-          description: "Payment page's main language."
-          enum:
-            - ru  # Russian
-            - uk  # Ukrainian
-            - en  # English
-            - lv  # Latvian
-            - fr  # French
-            - cs  # Czech
-            - ro  # Romanian
-            - it  # Italian
-            - sk  # Slovak
-            - pl  # Polish
-            - es  # Spanish
-            - hu  # Hungarian
-            - de  # German
-          x-enumDescriptions:
-            ru: "Russian"
-            uk: "Ukrainian"
-            en: "English"
-            lv: "Latvian"
-            fr: "French"
-            cs: "Czech"
-            ro: "Romanian"
-            it: "Italian"
-            sk: "Slovak"
-            pl: "Polish"
-            es: "Spanish"
-            hu: "Hungarian"
-            de: "German"
-          example: "en"
+          $ref: '#/components/schemas/Language'
         product_id:
           type: string
           maxLength: 1024
@@ -261,16 +615,7 @@ components:
             N: "No card token will be returned."
           default: N
         verification:
-          type: string
-          maxLength: 1
-          description: "Flag indicating if the order should be automatically reversed by FONDY after successful approval."
-          enum:
-            - Y  # Auto-reverse order
-            - N  # Do not auto-reverse order
-          x-enumDescriptions:
-            Y: "The order will be automatically reversed by FONDY after a successful approval."
-            N: "The order will not be automatically reversed."
-          default: N
+          $ref: '#/components/schemas/Verification'
         verification_type:
           type: string
           maxLength: 25
@@ -468,6 +813,74 @@ components:
         - ZAR  # South African Rand
         - ZMW  # Zambian Kwacha
         - ZWD  # Zimbabwean Dollar
+    Language:
+      lang:
+        type: string
+        maxLength: 2
+        description: "Payment page's main language."
+        enum:
+          - ru  # Russian
+          - uk  # Ukrainian
+          - en  # English
+          - lv  # Latvian
+          - fr  # French
+          - cs  # Czech
+          - ro  # Romanian
+          - it  # Italian
+          - sk  # Slovak
+          - pl  # Polish
+          - es  # Spanish
+          - hu  # Hungarian
+          - de  # German
+        x-enumDescriptions:
+          ru: "Russian"
+          uk: "Ukrainian"
+          en: "English"
+          lv: "Latvian"
+          fr: "French"
+          cs: "Czech"
+          ro: "Romanian"
+          it: "Italian"
+          sk: "Slovak"
+          pl: "Polish"
+          es: "Spanish"
+          hu: "Hungarian"
+          de: "German"
+        example: "en"
+    Verification:
+          type: string
+          maxLength: 1
+          description: "Flag indicating if the order should be automatically reversed by FONDY after successful approval."
+          enum:
+            - Y  # Auto-reverse order
+            - N  # Do not auto-reverse order
+          x-enumDescriptions:
+            Y: "The order will be automatically reversed by FONDY after a successful approval."
+            N: "The order will not be automatically reversed."
+          default: N
+    Preauth:
+          type: string
+          maxLength: 1
+          description: "Preauthorization parameter for Visa/MasterCard payments to determine the timing of the charge."
+          enum:
+            - Y  # Hold amount
+            - N  # Immediate debit
+          x-enumDescriptions:
+            Y: "The amount is held on the customer’s card and not charged until the merchant sends a **capture** request to confirm."
+            N: "The amount is debited from the customer’s card immediately and settled to the merchant account, in accordance with settlement rules."
+          default: N
+    ServerCallbackUrl:
+      type: string
+      maxLength: 2048
+      description: "URL for server-to-server callback post payment. See [Receiving Callbacks](https://docs.fondy.eu/en/docs/page/28/) for more details on callbacks."
+      example: "http://site.com/callbackurl"
+    Signature:
+      type: string
+      maxLength: 40
+      description: |
+        Signature for request verification, generated according to FONDY’s algorithm. Required to verify merchant request consistency and authenticity.
+        Learn how to use FONDY’s algorithm at the [Signature Generation for Request and Response](https://docs.fondy.eu/en/docs/page/3/#chapter-3-5) page.
+      example: "1773cf135bd89656131134b98637894dad42f808"
     AcceptPurchaseFinalResponse:
       type: object
       description: Parameters of the final response
@@ -676,3 +1089,505 @@ components:
               type: string
               enum: ["apple", "googlepay", "card"]
               description: "Payment method used."
+    ThreeDSecureStep1Request:
+      type: object
+      required:
+      - order_id
+      - merchant_id
+      - order_desc
+      - signature
+      - amount
+      - currency
+      - card_number
+      - cvv2
+      - expiry_date
+      - client_ip
+      properties:
+        order_id:
+          type: string
+          maxLength: 1024
+          description: "Order ID generated by the merchant."
+          example: "ID1234"
+        merchant_id:
+          type: integer
+          maxLength: 12
+          description: "Unique ID assigned to the merchant by FONDY."
+          example: 1
+        order_desc:
+          type: string
+          maxLength: 1024
+          description: "Order description in UTF-8."
+          example: "Hotel booking №1234 Antalia Resort"
+        signature:
+          $ref: '#/components/schemas/Signature'
+        amount:
+          type: integer
+          maxLength: 12
+          description: "Order amount in cents without separator."
+          example: 1020
+        currency:
+          $ref: '#/components/schemas/Currency'
+        card_number:
+          type: string
+          maxLength: 19
+          description: "Visa/MC card number."
+        cvv2:
+          type: string
+          maxLength: 4
+          description: "Card CVV2/CVC2 code."
+        expiry_date:
+          type: string
+          pattern: "^(0[1-9]|1[0-2])([0-9]{2})$"
+          description: "Card expiry date in MMYY format."
+        client_ip:
+          type: string
+          maxLength: 15
+          description: "Client IP address."
+        version:
+          type: string
+          maxLength: 10
+          description: "Protocol version."
+          default: "1.0.1"
+          example: "1.0.1"
+        server_callback_url:
+          $ref: '#/components/schemas/ServerCallbackUrl'
+        lifetime:
+          type: integer
+          maxLength: 6
+          description: "Order lifetime in seconds. Defaults to 600, maximum 69120000."
+          default: 600
+          example: 600
+        merchant_data:
+          type: string
+          maxLength: 2048
+          description: "Data that merchant wants to receive in callback or response."
+        preauth:
+          $ref: '#/components/schemas/Preauth'
+        sender_email:
+          type: string
+          maxLength: 50
+          description: "Customer email."
+        descriptor:
+          type: string
+          maxLength: 21
+          description: "Dynamic descriptor for transaction."
+        lang:
+          $ref: '#/components/schemas/Language'
+        product_id:
+          type: string
+          maxLength: 1024
+          description: "Merchant product or service ID."
+        verification:
+          $ref: '#/components/schemas/Verification'
+        container:
+          type: string
+          description: "Google/Apple Pay encrypted data in BASE64 encoding."
+          example: "ewogICJhcGlWZXJzaW9uTWlub3IiOiAwLAogICJhcGlWZXJzaW9uIjogMiw..."
+    ThreeDSecureStep1Response:
+      type: object
+      properties:
+        response_status:
+          type: string
+          maxLength: 50
+          description: "If no error occurred, this field always returns 'success'."
+          example: "success"
+        acs_url:
+          type: string
+          maxLength: 2048
+          description: "URL of the cardholder's issuing bank's Access Control Server, where the customer must enter the 3DSecure password."
+          example: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
+        pareq:
+          type: string
+          maxLength: 20480
+          description: "Parameter which must be submitted to `acs_url`."
+        md:
+          type: string
+          maxLength: 1024
+          description: "Unique 3DSecure request ID generated by FONDY payment gateway."
+      example:
+        response_status: "success"
+        acs_url: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
+        pareq: "PaReq_content_here"
+        md: "unique_3dsecure_request_id"
+    ThreeDSecureStep2Request:
+      type: object
+      required:
+      - order_id
+      - merchant_id
+      - pares
+      - md
+      - signature
+      properties:
+        order_id:
+          type: string
+          maxLength: 1024
+          description: "Order ID generated by the merchant."
+          example: "ID1234"
+        merchant_id:
+          type: integer
+          maxLength: 12
+          description: "Unique merchant ID assigned by FONDY."
+          example: 1
+        pares:
+          type: string
+          maxLength: 20480
+          description: "Parameter returned by the issuing bank to the specified URL after password verification."
+        md:
+          type: string
+          maxLength: 1024
+          description: "Unique 3DSecure request ID generated by FONDY."
+        version:
+          type: string
+          maxLength: 10
+          description: "Protocol version."
+          default: "1.0"
+          example: "1.0"
+        signature:
+          $ref: '#/components/schemas/Signature'
+      example:
+        order_id: "ID1234"
+        merchant_id: 1
+        pares: "PaRes_content_from_bank"
+        md: "unique_3dsecure_request_id"
+        version: "1.0"
+        signature: "1773cf135bd89656131134b98637894dad42f808"
+    CheckStatusRequest:
+      type: object
+      required:
+        - order_id
+        - merchant_id
+        - signature
+      properties:
+        order_id:
+          type: string
+          maxLength: 1024
+          description: "Order ID generated by the merchant."
+          example: "ID1234"
+        merchant_id:
+          type: integer
+          maxLength: 12
+          description: "Unique ID assigned to the merchant by FONDY."
+          example: 1
+        signature:
+          $ref: '#/components/schemas/Signature'
+        version:
+          type: string
+          maxLength: 10
+          description: "Protocol version. Default is 1.0."
+          example: "1.0"
+    OrderReversalRequest:
+      type: object
+      required:
+        - order_id
+        - merchant_id
+        - signature
+        - amount
+        - currency
+      properties:
+        order_id:
+          type: string
+          maxLength: 1024
+          description: "Order ID generated by the merchant."
+          example: "ID1234"
+        merchant_id:
+          type: integer
+          maxLength: 12
+          description: "Unique ID assigned to the merchant by FONDY."
+          example: 1
+        signature:
+          $ref: '#/components/schemas/Signature'
+        version:
+          type: string
+          maxLength: 10
+          description: "Protocol version. Default is 1.0."
+          example: "1.0"
+        amount:
+          type: integer
+          maxLength: 12
+          description: "Reversal amount in cents without separator (e.g., 1020 for 10 euros and 20 cents)."
+          example: 1020
+        currency:
+          $ref: '#/components/schemas/Currency'
+        comment:
+          type: string
+          maxLength: 1024
+          description: "Merchant's comment on the reversal reason in UTF-8."
+          example: "Customer returned product back."
+    OrderReversalResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+          maxLength: 1024
+          description: "Order ID generated by the merchant."
+          example: "ID1234"
+        merchant_id:
+          type: integer
+          maxLength: 12
+          description: "Unique ID assigned to the merchant by FONDY."
+          example: 1
+        revers_status:
+          type: string
+          maxLength: 50
+          description: "Reversal processing status."
+          enum: ["created", "declined", "approved"]
+        response_status:
+          type: string
+          maxLength: 50
+          description: "Request processing status. Returns 'success' if validation passes, otherwise 'failure'."
+          example: "success"
+        signature:
+          $ref: '#/components/schemas/Signature'
+        response_code:
+          type: integer
+          maxLength: 4
+          description: "Response decline code, if applicable."
+          example: 1008
+        response_description:
+          type: string
+          maxLength: 1024
+          description: "Description of the response decline reason."
+          example: "Parameter `amount` is mandatory."
+    TransactionListRequest:
+      type: object
+      properties:
+        merchant_id:
+          type: integer
+          maxLength: 12
+          description: "Merchant unique ID, assigned by FONDY during registration."
+          example: 1
+        order_id:
+          type: string
+          maxLength: 1024
+          description: "Order ID generated by the merchant."
+          example: "order_12345_12.10.2018:11:05"
+        signature:
+          $ref: '#/components/schemas/Signature'
+      required:
+        - merchant_id
+        - order_id
+        - signature
+    TransactionListResponse:
+      type: object
+      properties:
+        response:
+          type: array
+          description: "List of transactions for the specified order."
+          items:
+            type: object
+            properties:
+              verification_code:
+                type: string
+                nullable: true
+                description: "Verification code, if applicable."
+                example: null
+              masked_card:
+                type: string
+                description: "Masked card number."
+                example: "408093XXXXXX8221"
+              protocol:
+                type: string
+                description: "Protocol used for the transaction."
+                example: "safe_charge"
+              pares_status:
+                type: string
+                nullable: true
+                description: "3D Secure Pares status."
+                example: null
+              sender_country:
+                type: string
+                description: "Sender's country."
+                example: "US"
+              istest:
+                type: string
+                description: "Indicates if the transaction is a test ('Y' or 'N')."
+                example: "N"
+              timestart:
+                type: string
+                format: date-time
+                description: "Transaction start time."
+                example: "17.02.2017 13:50:32"
+              currency:
+                type: string
+                description: "Transaction currency."
+                example: "USD"
+              preauth:
+                type: string
+                description: "Indicates if the transaction is preauthorized ('Y' or 'N')."
+                example: "N"
+              transaction_status:
+                type: string
+                description: "Current status of the transaction."
+                example: "declined"
+              duration:
+                type: integer
+                description: "Duration of the transaction in seconds."
+                example: 953
+              ip_country:
+                type: string
+                description: "IP country of the sender."
+                example: "US"
+              settlement_amount:
+                type: integer
+                description: "Settlement amount for the transaction."
+                example: 0
+              timeend:
+                type: string
+                format: date-time
+                description: "Transaction end time."
+                example: "17.02.2017 13:50:33"
+              order_id:
+                type: string
+                description: "Order ID related to the transaction."
+                example: "13986590658a6e385e2c26"
+              actual_amount:
+                type: number
+                description: "Actual amount involved in the transaction."
+                example: 33.7
+              ipaddress_v4:
+                type: string
+                description: "Sender's IPv4 address."
+                example: "45.56.154.162"
+              expire_year:
+                type: string
+                description: "Expiration year of the payment card."
+                example: "2019"
+              actual_currency:
+                type: string
+                description: "Actual currency of the transaction."
+                example: "USD"
+              tran_type:
+                type: string
+                description: "Transaction type (e.g., 'purchase')."
+                example: "purchase"
+              payment_system:
+                type: string
+                description: "Payment system used (e.g., 'card')."
+                example: "card"
+              merchant_id:
+                type: integer
+                description: "Merchant ID associated with the transaction."
+                example: 1397308
+              response_description:
+                type: string
+                description: "Description of the response or error message."
+                example: "General decline"
+              payment_id:
+                type: integer
+                description: "Unique ID of the payment."
+                example: 37877547
+              card_type:
+                type: string
+                description: "Type of card used in the transaction."
+                example: "VISA"
+              amount:
+                type: number
+                description: "Transaction amount."
+                example: 33.7
+              sender_email:
+                type: string
+                nullable: true
+                description: "Email of the sender."
+                example: null
+              response_code:
+                type: integer
+                description: "Response code of the transaction."
+                example: 1000
+    CardTokenPurchaseRequest:
+      allOf:
+        - $ref: '#/components/schemas/AcceptPurchaseRequest'
+        - type: object
+          required:
+            - rectoken
+    CardTokenPurchaseResponse:
+      $ref: '#/components/schemas/AcceptPurchaseFinalResponse'
+    CardVerificationRequest:
+      allOf:
+        - $ref: '#/components/schemas/AcceptPurchaseRequest'
+        - type: object
+          required:
+            - verification
+            - verification_type
+    CardVerificationResponse:
+      $ref: '#/components/schemas/AcceptPurchaseFinalResponse'
+    P2pCreditRequest:
+      allOf:
+        - $ref: '#/components/schemas/AcceptPurchaseRequest'
+        - type: object
+          required:
+            - receiver_card_number
+            - receiver_rectoken
+    P2pCreditResponse:
+      $ref: '#/components/schemas/AcceptPurchaseFinalResponse'
+    CapturePrePurchaseRequest:
+      type: object
+      properties:
+        order_id:
+          type: string
+          description: Unique identifier for the order.
+          example: "ID1234"
+        merchant_id:
+          type: integer
+          description: Unique identifier for the merchant, generated by FONDY.
+          example: 1
+        signature:
+          type: string
+          description: Signature to verify request consistency and authenticity.
+          example: "1773cf135bd89656131134b98637894dad42f808"
+        version:
+          type: string
+          description: Protocol version.
+          default: "1.0"
+        amount:
+          type: integer
+          description: Amount to capture in the smallest unit of currency (e.g., cents).
+          example: 1020
+        currency:
+          type: string
+          description: Currency of the transaction (e.g., USD, EUR, GBP, UAH).
+          example: "USD"
+      required:
+        - order_id
+        - merchant_id
+        - signature
+        - amount
+        - currency
+    CapturePrePurchaseResponse:
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            order_id:
+              type: string
+              description: Unique identifier for the order.
+              example: "test309906285"
+            response_status:
+              type: string
+              description: Processing status, success if request parameters pass validation.
+              example: "success"
+            response_code:
+              type: string
+              description: Code for response status.
+              example: ""
+            capture_status:
+              type: string
+              description: Capture processing status, indicating if the capture was successful or declined.
+              example: "captured"
+            response_description:
+              type: string
+              description: Reason for the response decline if applicable.
+              example: ""
+            merchant_id:
+              type: integer
+              description: Unique identifier for the merchant.
+              example: 1
+
+
+
+
+
+
+
+
+

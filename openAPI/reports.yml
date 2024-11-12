@@ -1,0 +1,126 @@
+openapi: 3.1.0
+info:
+  title: Reports API
+  description: API for generating reports in Fondy.
+  version: 1.0.0
+servers:
+  - url: https://portal.fondy.eu/api
+    description: Production server
+paths:
+  /extend/company/report/:
+    post:
+      summary: Retrieve Report Data
+      tags: 
+      - Reports
+      description: |
+        This endpoint allows merchants to retrieve report data by sending a POST request with 
+        necessary filters and pagination parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportsRequest'
+      responses:
+        '200':
+          description: "Successful retrieval of report data."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportsResponse'
+
+components:
+  schemas:
+    ReportsRequest:
+      type: object
+      properties:
+        filters:
+          type: array
+          description: "A set of filters, specific to each report ID."
+          items:
+            type: object
+            properties:
+              s:
+                type: string
+                description: "Filter field, e.g., 'settlement_date'."
+                example: "settlement_date"
+              m:
+                type: string
+                description: "Filter mode, e.g., 'dateis'."
+                example: "dateis"
+              v:
+                type: string
+                description: "Filter value, e.g., a specific date."
+                example: "2019-01-24"
+          example: [{"s": "settlement_date", "m": "dateis", "v": "2019-01-24"}]
+        merchant_id:
+          type: integer
+          maxLength: 12
+          description: "Unique ID assigned to the merchant by FONDY."
+          example: 1396424
+        report_id:
+          type: integer
+          maxLength: 12
+          description: "Unique ID of the report. See [list of available reports](https://docs.fondy.eu/en/docs/page/61/#listreport)."
+          enum:
+            - 666
+            - 403
+            - 500
+            - 528
+            - 745
+          example: 500
+        on_page:
+          type: integer
+          maxLength: 12
+          description: "Limit of records returned per request. Recommended between 10 and 500."
+          example: 500
+        page:
+          type: integer
+          maxLength: 12
+          description: |
+            "Records page offset. For example, with `on_page` set to 50, 
+            set `page` to 2 to retrieve records 51-100."
+          example: 2
+      required:
+        - filters
+        - merchant_id
+        - report_id
+        - on_page
+        - page
+    ReportsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          description: "Dataset as a sorted two-dimensional JSON array."
+          items:
+            type: array
+            items:
+              type: string
+          example: 
+            - [1234567890, "2019-01-23 10:58:38", "approved", "630.00", "UAH", "11.97", "test-25697841-1", "618.03", "EUR", "2019-01-24 08:00:00", "completed", "2426012568", "2019-01-23 10:58:38", "purchase", "Visa/MC", "test@test.com", "Test order 1", "[]", "Test payment 1", 10000000001]
+            - [1234567891, "2019-01-23 10:56:51", "approved", "572.86", "UAH", "10.88", "test-94341241-1", "561.98", "EUR", "2019-01-24 08:00:00", "completed", "2426012568", "2019-01-23 10:56:51", "purchase", "Visa/MC", "test2@test.com", "Test order 2", "[]", "Test payment 2", 10000000002]
+        fields:
+          type: array
+          items:
+            type: string
+          description: "List of fields returned in the report data."
+          example: ["payment_id", "order_time", "order_status", "actual_amount", "currency", "fee", "order_id", "settlement_amount", "settlement_currency", "settlement_date", "settlement_status", "odb_ref", "tran_time", "settlement_type", "payment_system", "sender_email", "order_desc", "merchant_data", "settlement_desc", "transaction_id"]
+        rows_count:
+          type: integer
+          maxLength: 12
+          description: "Total number of records in the dataset."
+          example: 2
+        rows_on_page:
+          type: integer
+          maxLength: 12
+          description: "Number of records returned in the current request."
+          example: 10
+        rows_page:
+          type: integer
+          maxLength: 12
+          description: |
+            "Page offset in the dataset. With `rows_on_page` set to 10 
+            and `rows_page` set to 1, records from 1-10 are returned."
+          example: 1
+

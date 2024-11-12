@@ -1,0 +1,92 @@
+openapi: 3.1.0
+info:
+  title: Auth API
+  description: API for generating token in Fondy.
+  version: 1.0.0
+servers:
+  - url: https://wallet.fondy.eu
+    description: Production server
+paths:
+  /authorizer/token/application/get:
+    post:
+      summary: Generate Access Token
+      tags: 
+      - Auth
+      description: |
+        This endpoint generates an access token for the application by sending a POST request with 
+        the required parameters. The parameters include the `application_id`, `date`, and `signature`. 
+        Refer to FONDY support to obtain the necessary `application_id` and secret key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessTokenRequest'
+      responses:
+        '200':
+          description: "Access token successfully generated."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '403':
+          description: "Invalid request parameters."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error_code:
+                    type: integer
+                    description: "Code indicating the type of error encountered."
+                    example: 403
+                  error_message:
+                    type: string
+                    description: "Message explaining why the request failed."
+                    example: "Incorrect signature"
+                  request_id:
+                    type: string
+                    description: "Unique ID for tracking the request."
+                    example: "cGeC7PH59ESqQw30"
+
+components:
+  schemas:
+    AccessTokenRequest:
+      type: object
+      properties:
+        application_id:
+          type: string
+          maxLength: 20
+          description: "Company ID. Contact FONDY support to obtain the ID and secret key."
+          example: "1234"
+        date:
+          type: string
+          maxLength: 1024
+          description: |
+            "Date in any format. Acts as a salt for the SHA-512 signature hash. 
+            Examples include '2020-04-06 11:15:27' or a timestamp like '1586171872'."
+          example: "2020-04-06 11:15:27"
+        signature:
+          type: string
+          maxLength: 128
+          description: The signature is formed by concatenating the company private key, company id, and date parameter through a vertical bar "|" (in utf-8 encoding). From the received line, you need to take the sha512 hash in hex.
+          example: "7eec02ed1088b47da639549a109c0e98a75e2d8c76dfa33db4ee18359b2ea677dda37516abc0e439b286261a48d49d3e2fd885d9f09c8ff5c7308afe4180688a"
+      required:
+        - application_id
+        - date
+        - signature
+    AccessTokenResponse:
+      type: object
+      properties:
+        request_id:
+          type: string
+          description: "Unique ID for tracking the request."
+          example: "SuVhZRMS7JDD2iGS"
+        token:
+          type: string
+          description: "Access token for the application."
+          example: "Yq0GXWeOZ1m8BsiCa4iQPDB84Wjw346"
+        expires_in:
+          type: integer
+          description: "Time in seconds until the token expires."
+          example: 3602
