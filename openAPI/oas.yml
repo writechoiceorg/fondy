@@ -364,9 +364,7 @@ components:
           default: 36000
           example: 600
         merchant_data:
-          type: string
-          maxLength: 2048
-          description: "Any data the merchant wants to receive in response callbacks and reports."
+          $ref: '#/components/schemas/MerchantData'
         preauth:
           $ref: '#/components/schemas/Preauth'
         sender_email:
@@ -692,6 +690,10 @@ components:
       type: string
       maxLength: 254
       description: "Customer's email address. Fondy will send an email regarding the payment to this address."
+    MerchantData:
+      type: string
+      maxLength: 2048
+      description: Custom data provided by the merchant in the request. You can include any arbitrary string data relevant to your business needs, such as user IDs, session information, or notes. The data must be in string format and must not contain the '|' (pipe) character.
     AcceptPurchaseFinalResponse:
       type: object
       description: Parameters of the final response
@@ -822,9 +824,7 @@ components:
           maxLength: 1024
           description: "Merchant's product or service ID."
         merchant_data:
-          type: string
-          maxLength: 2048
-          description: "Arbitrary data sent by the merchant in the request."
+          $ref: '#/components/schemas/MerchantData'
         verification_status:
           type: string
           maxLength: 50
@@ -962,9 +962,7 @@ components:
           default: 600
           example: 600
         merchant_data:
-          type: string
-          maxLength: 2048
-          description: "Data that merchant wants to receive in callback or response."
+          $ref: '#/components/schemas/MerchantData'
         preauth:
           $ref: '#/components/schemas/Preauth'
         sender_email:
