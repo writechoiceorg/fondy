@@ -488,7 +488,7 @@ components:
         recurring_data:
           type: string
           format: byte
-          description: Base64-encoded JSON string containing details for recurring payments.
+          description: Base64-encoded string containing details for recurring payments.
           example: eyJldmVyeSI6MSwicGVyaW9kIjoibW9udGgiLCJhbW91bnQiOjEwMDAwLCJzdGFydF90aW1lIjoiMjAyNC0wNC0yNiJ9
     AcceptPurchaseRequest:
       type: object
