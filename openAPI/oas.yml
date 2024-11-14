@@ -119,7 +119,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderReversalResponse'
-  /api/transaction_list/:
+  /transaction_list/:
     post:
       summary: Transaction List by Order
       operationId: transaction-list-by-order
@@ -140,7 +140,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionListResponse'
-  /api/recurring:
+  /recurring:
     post:
       summary: Recurring payment
       operationId: recurring-payment
@@ -165,7 +165,48 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/ResponseWithoutInterim'
-  /api/checkout/redirect/:
+  /subscription/:
+    post:
+      summary: Start/Stop a Subscription
+      operationId: manage-subscription
+      tags:
+        - Subscription
+      description: |
+        This endpoint allows merchants to start or stop a subscription for an order. 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionManagementRequest'
+            example:
+              request:
+                merchant_id: 1480995
+                order_id: "testpaymenttoken12"
+                action: "stop"
+                signature: "209b6e718d9c976784fff9adc88c0e9b45fcca6c"
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionManagementResponse'
+              examples:
+                success:
+                  summary: Successful Stop Response
+                  value:
+                    response:
+                      response_status: "success"
+                      status: "Subscription stopped successfully"
+                error:
+                  summary: Error Response
+                  value:
+                    response:
+                      response_status: "failure"
+                      error_message: "Invalid signature"
+                      error_code: 2032
+  /checkout/redirect/:
     post:
       summary: Card Verification
       operationId: card-verification
@@ -293,7 +334,7 @@ components:
               type: integer
               description: "Error code for the failure."
               example: 1000
-    AcceptPurchaseRequest:
+    AcceptPurchaseReqData:
       type: object
       required:
         - order_id
@@ -436,14 +477,24 @@ components:
             - Y  # Enable scheduled payments
             - N  # Disable scheduled payments
           x-enumDescriptions:
-            Y: "Enables scheduled (recurring) payments for the order. The customer will be charged periodically based on the defined schedule."
-            N: "Disables scheduled payments for the order. The payment will be processed as a one-time transaction."
+            Y: Enables scheduled (recurring) payments for the order. The customer will be charged periodically based on the defined schedule.
+            N: Disables scheduled payments for the order. The payment will be processed as a one-time transaction.
           default: N
         subscription_callback_url:
           type: string
           maxLength: 2048
-          description: "URL for server callback after scheduled payment."
-          example: "http://site.com/subscriptioncallback"
+          description: URL for server callback after scheduled payment.
+          example: http://site.com/subscriptioncallback
+        recurring_data:
+          type: string
+          format: byte
+          description: Base64-encoded JSON string containing details for recurring payments.
+          example: eyJldmVyeSI6MSwicGVyaW9kIjoibW9udGgiLCJhbW91bnQiOjEwMDAwLCJzdGFydF90aW1lIjoiMjAyNC0wNC0yNiJ9
+    AcceptPurchaseRequest:
+      type: object
+      properties:
+        request:
+          $ref: '#/components/schemas/AcceptPurchaseReqData'
     Currency:
       type: string
       description: Currency for the transaction (e.g., EUR, USD, GBP). Refer to the [Currencies](https://docs.fondy.eu/en/docs/page/27/) page for a full list of available currencies.
@@ -696,462 +747,486 @@ components:
       description: Custom data provided by the merchant in the request. You can include any arbitrary string data relevant to your business needs, such as user IDs, session information, or notes. The data must be in string format and must not contain the '|' (pipe) character.
     AcceptPurchaseFinalResponse:
       type: object
-      description: Parameters of the final response
       properties:
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        merchant_id:
-          type: integer
-          maxLength: 12
-          description: "Unique ID assigned to the merchant by Fondy."
-        amount:
-          type: integer
-          maxLength: 12
-          description: "Order amount in cents without separator."
-        currency:
-          $ref: '#/components/schemas/Currency'
-        order_status:
-          type: string
-          maxLength: 50
-          description: "Order processing status indicating the current state of the transaction."
-          enum:
-            - created       # Order created, awaiting payment details
-            - processing    # Order processing by payment gateway
-            - declined      # Order declined by Fondy, bank, or external system
-            - approved      # Order completed, funds held and soon credited
-            - expired       # Order lifetime expired
-            - reversed      # Approved transaction was fully reversed
-          x-enumDescriptions:
-            created: "Order has been created, but the customer has not entered payment details yet; the merchant should continue to request the status of the order."
-            processing: "Order is still processing by the payment gateway; the merchant should continue to request the status of the order."
-            declined: "Order is declined by Fondy, a bank, or an external payment system."
-            approved: "Order completed successfully, funds are held on the payer’s account and soon will be credited to the merchant; the merchant can provide the service or ship goods."
-            expired: "Order lifetime expired."
-            reversed: "Previously approved transaction was fully reversed. In this case, the `reversal_amount` will equal `actual_amount`."
-        response_status:
-          type: string
-          maxLength: 50
-          description: "Request processing status (e.g., 'success' or 'failure')."
-        signature:
-          type: string
-          maxLength: 40
-          description: "Order signature for request verification."
-        tran_type:
-          type: string
-          maxLength: 50
-          enum: ["purchase", "verification", "p2p credit", "p2p transfer", "settlement", "reverse"]
-        sender_cell_phone:
-          type: string
-          maxLength: 16
-          description: "Customer's mobile phone number."
-        sender_account:
-          type: string
-          maxLength: 50
-          description: "Customer payment account."
-        masked_card:
-          type: string
-          maxLength: 19
-          description: "Masked card number."
-        card_bin:
-          type: integer
-          maxLength: 6
-          description: "First 6 digits of the card number."
-        card_type:
-          type: string
-          maxLength: 50
-          enum: ["VISA", "MasterCard"]
-        rrn:
-          type: string
-          maxLength: 50
-          description: "Bank transaction ID, often not unique."
-        approval_code:
-          type: string
-          maxLength: 6
-          description: "Authorization code returned by the bank."
-        response_code:
-          type: integer
-          maxLength: 4
-          description: "Order decline response code."
-        response_description:
-          type: string
-          maxLength: 1024
-          description: "Description of the response code."
-        reversal_amount:
-          type: integer
-          maxLength: 12
-          description: "Total reversal amount for the current order."
-        settlement_amount:
-          type: integer
-          maxLength: 12
-          description: "Settlement amount for the current order."
-        settlement_currency:
-          $ref: '#/components/schemas/Currency'
-        order_time:
-          type: string
-          format: date-time
-          description: "Order creation date in DD.MM.YYYY hh:mm:ss format."
-        settlement_date:
-          type: string
-          format: date
-          description: "Settlement date in DD.MM.YYYY format."
-        eci:
-          type: integer
-          maxLength: 2
-          description: "Ecommerce Indicator for 3DSecure authentication status."
-          enum: [5, 6, 7]
-        fee:
-          type: integer
-          maxLength: 12
-          description: "Fee charged by Fondy."
-        payment_system:
-          type: string
-          maxLength: 50
-          description: "Payment system used for the transaction."
-        sender_email:
-          $ref: '#/components/schemas/SenderEmail'
-        payment_id:
-          type: integer
-          maxLength: 19
-          description: "Unique payment ID generated by Fondy."
-        actual_amount:
-          type: integer
-          maxLength: 12
-          description: "Actual amount held or charged from the card."
-        actual_currency:
-          $ref: '#/components/schemas/Currency'
-        product_id:
-          type: string
-          maxLength: 1024
-          description: "Merchant's product or service ID."
-        merchant_data:
-          $ref: '#/components/schemas/MerchantData'
-        verification_status:
-          type: string
-          maxLength: 50
-          description: "Code verification result."
-          enum: ["verified", "incorrect", "failed", "created"]
-        rectoken:
-          type: string
-          maxLength: 40
-          description: "Token for accessing card funds without cardholder interaction."
-        rectoken_lifetime:
-          type: string
-          format: date-time
-          description: "Token expiration date in DD.MM.YYYY hh:mm:ss format."
-        additional_info:
+        response:
           type: object
-          description: "Additional information in JSON format."
+          description: Parameters of the final response
           properties:
-            bank_name:
-              type: string
-              description: "Bank name."
-            bank_country:
-              type: string
-              description: "Bank country."
-            bank_response_code:
-              type: string
-              description: "Response code from the bank."
-            card_product:
-              type: string
-              description: "Type of card product."
-            card_category:
-              type: string
-              description: "Category of the card."
-            settlement_fee:
-              type: number
-              description: "Settlement fee."
-            capture_status:
-              type: string
-              description: "Status of the capture."
-            client_fee:
-              type: number
-              description: "Fee charged to the client."
-            ipaddress_v4:
-              type: string
-              description: "IP address in IPv4 format."
-            capture_amount:
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            merchant_id:
               type: integer
-              description: "Amount captured."
+              maxLength: 12
+              description: "Unique ID assigned to the merchant by Fondy."
+            amount:
+              type: integer
+              maxLength: 12
+              description: "Order amount in cents without separator."
+            currency:
+              $ref: '#/components/schemas/Currency'
+            order_status:
+              type: string
+              maxLength: 50
+              description: "Order processing status indicating the current state of the transaction."
+              enum:
+                - created       # Order created, awaiting payment details
+                - processing    # Order processing by payment gateway
+                - declined      # Order declined by Fondy, bank, or external system
+                - approved      # Order completed, funds held and soon credited
+                - expired       # Order lifetime expired
+                - reversed      # Approved transaction was fully reversed
+              x-enumDescriptions:
+                created: "Order has been created, but the customer has not entered payment details yet; the merchant should continue to request the status of the order."
+                processing: "Order is still processing by the payment gateway; the merchant should continue to request the status of the order."
+                declined: "Order is declined by Fondy, a bank, or an external payment system."
+                approved: "Order completed successfully, funds are held on the payer’s account and soon will be credited to the merchant; the merchant can provide the service or ship goods."
+                expired: "Order lifetime expired."
+                reversed: "Previously approved transaction was fully reversed. In this case, the `reversal_amount` will equal `actual_amount`."
+            response_status:
+              type: string
+              maxLength: 50
+              description: "Request processing status (e.g., 'success' or 'failure')."
+            signature:
+              type: string
+              maxLength: 40
+              description: "Order signature for request verification."
+            tran_type:
+              type: string
+              maxLength: 50
+              enum: ["purchase", "verification", "p2p credit", "p2p transfer", "settlement", "reverse"]
+            sender_cell_phone:
+              type: string
+              maxLength: 16
+              description: "Customer's mobile phone number."
+            sender_account:
+              type: string
+              maxLength: 50
+              description: "Customer payment account."
+            masked_card:
+              type: string
+              maxLength: 19
+              description: "Masked card number."
+            card_bin:
+              type: integer
+              maxLength: 6
+              description: "First 6 digits of the card number."
             card_type:
               type: string
+              maxLength: 50
               enum: ["VISA", "MasterCard"]
-              description: "Type of the card used."
-            reservation_data:
+            rrn:
               type: string
-              description: "Reservation data."
-            bank_response_description:
+              maxLength: 50
+              description: "Bank transaction ID, often not unique."
+            approval_code:
               type: string
-              description: "Description of the bank's response."
-            transaction_id:
+              maxLength: 6
+              description: "Authorization code returned by the bank."
+            response_code:
               type: integer
-              description: "Transaction ID from the bank."
-            timeend:
+              maxLength: 4
+              description: "Order decline response code."
+            response_description:
+              type: string
+              maxLength: 1024
+              description: "Description of the response code."
+            reversal_amount:
+              type: integer
+              maxLength: 12
+              description: "Total reversal amount for the current order."
+            settlement_amount:
+              type: integer
+              maxLength: 12
+              description: "Settlement amount for the current order."
+            settlement_currency:
+              $ref: '#/components/schemas/Currency'
+            order_time:
               type: string
               format: date-time
-              description: "End time for the transaction."
-            card_number:
+              description: "Order creation date in DD.MM.YYYY hh:mm:ss format."
+            settlement_date:
               type: string
-              description: "Card number used."
-            payment_method:
+              format: date
+              description: "Settlement date in DD.MM.YYYY format."
+            eci:
+              type: integer
+              maxLength: 2
+              description: "Ecommerce Indicator for 3DSecure authentication status."
+              enum: [5, 6, 7]
+            fee:
+              type: integer
+              maxLength: 12
+              description: "Fee charged by Fondy."
+            payment_system:
               type: string
-              enum: ["apple", "googlepay", "card"]
-              description: "Payment method used."
+              maxLength: 50
+              description: "Payment system used for the transaction."
+            sender_email:
+              $ref: '#/components/schemas/SenderEmail'
+            payment_id:
+              type: integer
+              maxLength: 19
+              description: "Unique payment ID generated by Fondy."
+            actual_amount:
+              type: integer
+              maxLength: 12
+              description: "Actual amount held or charged from the card."
+            actual_currency:
+              $ref: '#/components/schemas/Currency'
+            product_id:
+              type: string
+              maxLength: 1024
+              description: "Merchant's product or service ID."
+            merchant_data:
+              $ref: '#/components/schemas/MerchantData'
+            verification_status:
+              type: string
+              maxLength: 50
+              description: "Code verification result."
+              enum: ["verified", "incorrect", "failed", "created"]
+            rectoken:
+              type: string
+              maxLength: 40
+              description: "Token for accessing card funds without cardholder interaction."
+            rectoken_lifetime:
+              type: string
+              format: date-time
+              description: "Token expiration date in DD.MM.YYYY hh:mm:ss format."
+            additional_info:
+              type: object
+              description: "Additional information in JSON format."
+              properties:
+                bank_name:
+                  type: string
+                  description: "Bank name."
+                bank_country:
+                  type: string
+                  description: "Bank country."
+                bank_response_code:
+                  type: string
+                  description: "Response code from the bank."
+                card_product:
+                  type: string
+                  description: "Type of card product."
+                card_category:
+                  type: string
+                  description: "Category of the card."
+                settlement_fee:
+                  type: number
+                  description: "Settlement fee."
+                capture_status:
+                  type: string
+                  description: "Status of the capture."
+                client_fee:
+                  type: number
+                  description: "Fee charged to the client."
+                ipaddress_v4:
+                  type: string
+                  description: "IP address in IPv4 format."
+                capture_amount:
+                  type: integer
+                  description: "Amount captured."
+                card_type:
+                  type: string
+                  enum: ["VISA", "MasterCard"]
+                  description: "Type of the card used."
+                reservation_data:
+                  type: string
+                  description: "Reservation data."
+                bank_response_description:
+                  type: string
+                  description: "Description of the bank's response."
+                transaction_id:
+                  type: integer
+                  description: "Transaction ID from the bank."
+                timeend:
+                  type: string
+                  format: date-time
+                  description: "End time for the transaction."
+                card_number:
+                  type: string
+                  description: "Card number used."
+                payment_method:
+                  type: string
+                  enum: ["apple", "googlepay", "card"]
+                  description: "Payment method used."
     ThreeDSecureStep1Request:
       type: object
-      required:
-      - order_id
-      - merchant_id
-      - order_desc
-      - signature
-      - amount
-      - currency
-      - card_number
-      - cvv2
-      - expiry_date
-      - client_ip
       properties:
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        merchant_id:
-          type: integer
-          maxLength: 12
-          description: "Unique ID assigned to the merchant by Fondy."
-          example: 1
-        order_desc:
-          type: string
-          maxLength: 1024
-          description: "Order description in UTF-8."
-          example: "Hotel booking №1234 Antalia Resort"
-        signature:
-          $ref: '#/components/schemas/Signature'
-        amount:
-          type: integer
-          maxLength: 12
-          description: "Order amount in cents without separator."
-          example: 1020
-        currency:
-          $ref: '#/components/schemas/Currency'
-        card_number:
-          type: string
-          maxLength: 19
-          description: "Visa/MC card number."
-        cvv2:
-          type: string
-          maxLength: 4
-          description: "Card CVV2/CVC2 code."
-        expiry_date:
-          type: string
-          pattern: "^(0[1-9]|1[0-2])([0-9]{2})$"
-          description: "Card expiry date in MMYY format."
-        client_ip:
-          type: string
-          maxLength: 15
-          description: "Client IP address."
-        version:
-          type: string
-          maxLength: 10
-          description: "Protocol version."
-          default: "1.0.1"
-          example: "1.0.1"
-        server_callback_url:
-          $ref: '#/components/schemas/ServerCallbackUrl'
-        lifetime:
-          type: integer
-          maxLength: 6
-          description: "Order lifetime in seconds. Defaults to 600, maximum 69120000."
-          default: 600
-          example: 600
-        merchant_data:
-          $ref: '#/components/schemas/MerchantData'
-        preauth:
-          $ref: '#/components/schemas/Preauth'
-        sender_email:
-          $ref: '#/components/schemas/SenderEmail'
-        descriptor:
-          type: string
-          maxLength: 21
-          description: "Dynamic descriptor for transaction."
-        lang:
-          $ref: '#/components/schemas/Language'
-        product_id:
-          type: string
-          maxLength: 1024
-          description: "Merchant product or service ID."
-        verification:
-          $ref: '#/components/schemas/Verification'
-        container:
-          type: string
-          description: "Google/Apple Pay encrypted data in BASE64 encoding."
-          example: "ewogICJhcGlWZXJzaW9uTWlub3IiOiAwLAogICJhcGlWZXJzaW9uIjogMiw..."
+        request:
+          type: object
+          required:
+          - order_id
+          - merchant_id
+          - order_desc
+          - signature
+          - amount
+          - currency
+          - card_number
+          - cvv2
+          - expiry_date
+          - client_ip
+          properties:
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            merchant_id:
+              type: integer
+              maxLength: 12
+              description: "Unique ID assigned to the merchant by Fondy."
+              example: 1
+            order_desc:
+              type: string
+              maxLength: 1024
+              description: "Order description in UTF-8."
+              example: "Hotel booking №1234 Antalia Resort"
+            signature:
+              $ref: '#/components/schemas/Signature'
+            amount:
+              type: integer
+              maxLength: 12
+              description: "Order amount in cents without separator."
+              example: 1020
+            currency:
+              $ref: '#/components/schemas/Currency'
+            card_number:
+              type: string
+              maxLength: 19
+              description: "Visa/MC card number."
+            cvv2:
+              type: string
+              maxLength: 4
+              description: "Card CVV2/CVC2 code."
+            expiry_date:
+              type: string
+              pattern: "^(0[1-9]|1[0-2])([0-9]{2})$"
+              description: "Card expiry date in MMYY format."
+            client_ip:
+              type: string
+              maxLength: 15
+              description: "Client IP address."
+            version:
+              type: string
+              maxLength: 10
+              description: "Protocol version."
+              default: "1.0.1"
+              example: "1.0.1"
+            server_callback_url:
+              $ref: '#/components/schemas/ServerCallbackUrl'
+            lifetime:
+              type: integer
+              maxLength: 6
+              description: "Order lifetime in seconds. Defaults to 600, maximum 69120000."
+              default: 600
+              example: 600
+            merchant_data:
+              $ref: '#/components/schemas/MerchantData'
+            preauth:
+              $ref: '#/components/schemas/Preauth'
+            sender_email:
+              $ref: '#/components/schemas/SenderEmail'
+            descriptor:
+              type: string
+              maxLength: 21
+              description: "Dynamic descriptor for transaction."
+            lang:
+              $ref: '#/components/schemas/Language'
+            product_id:
+              type: string
+              maxLength: 1024
+              description: "Merchant product or service ID."
+            verification:
+              $ref: '#/components/schemas/Verification'
+            container:
+              type: string
+              description: "Google/Apple Pay encrypted data in BASE64 encoding."
+              example: "ewogICJhcGlWZXJzaW9uTWlub3IiOiAwLAogICJhcGlWZXJzaW9uIjogMiw..."
     ThreeDSecureStep1Response:
       type: object
       properties:
-        response_status:
-          type: string
-          maxLength: 50
-          description: "If no error occurred, this field always returns 'success'."
-          example: "success"
-        acs_url:
-          type: string
-          maxLength: 2048
-          description: "URL of the cardholder's issuing bank's Access Control Server, where the customer must enter the 3DSecure password."
-          example: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
-        pareq:
-          type: string
-          maxLength: 20480
-          description: "Parameter which must be submitted to `acs_url`."
-        md:
-          type: string
-          maxLength: 1024
-          description: "Unique 3DSecure request ID generated by Fondy payment gateway."
-      example:
-        response_status: "success"
-        acs_url: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
-        pareq: "PaReq_content_here"
-        md: "unique_3dsecure_request_id"
+        response:
+          type: object
+          properties:
+            response_status:
+              type: string
+              maxLength: 50
+              description: "If no error occurred, this field always returns 'success'."
+              example: "success"
+            acs_url:
+              type: string
+              maxLength: 2048
+              description: "URL of the cardholder's issuing bank's Access Control Server, where the customer must enter the 3DSecure password."
+              example: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
+            pareq:
+              type: string
+              maxLength: 20480
+              description: "Parameter which must be submitted to `acs_url`."
+            md:
+              type: string
+              maxLength: 1024
+              description: "Unique 3DSecure request ID generated by Fondy payment gateway."
+          example:
+            response_status: "success"
+            acs_url: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
+            pareq: "PaReq_content_here"
+            md: "unique_3dsecure_request_id"
     ThreeDSecureStep2Request:
       type: object
-      required:
-      - order_id
-      - merchant_id
-      - pares
-      - md
-      - signature
       properties:
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        merchant_id:
-          type: integer
-          maxLength: 12
-          description: "Unique merchant ID assigned by Fondy."
-          example: 1
-        pares:
-          type: string
-          maxLength: 20480
-          description: "Parameter returned by the issuing bank to the specified URL after password verification."
-        md:
-          type: string
-          maxLength: 1024
-          description: "Unique 3DSecure request ID generated by Fondy."
-        version:
-          type: string
-          maxLength: 10
-          description: "Protocol version."
-          default: "1.0"
-          example: "1.0"
-        signature:
-          $ref: '#/components/schemas/Signature'
-      example:
-        order_id: "ID1234"
-        merchant_id: 1
-        pares: "PaRes_content_from_bank"
-        md: "unique_3dsecure_request_id"
-        version: "1.0"
-        signature: "1773cf135bd89656131134b98637894dad42f808"
+        request:
+          type: object
+          required:
+          - order_id
+          - merchant_id
+          - pareq
+          - md
+          - signature
+          properties:
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            merchant_id:
+              type: integer
+              maxLength: 12
+              description: "Unique merchant ID assigned by Fondy."
+              example: 1
+            pareq:
+              type: string
+              maxLength: 20480
+              description: "Parameter returned by the issuing bank to the specified URL after password verification."
+            md:
+              type: string
+              maxLength: 1024
+              description: "Unique 3DSecure request ID generated by Fondy."
+            version:
+              type: string
+              maxLength: 10
+              description: "Protocol version."
+              default: "1.0"
+              example: "1.0"
+            signature:
+              $ref: '#/components/schemas/Signature'
+          example:
+            order_id: "ID1234"
+            merchant_id: 1
+            pareq: "PaReq_content_from_bank"
+            md: "unique_3dsecure_request_id"
+            version: "1.0"
+            signature: "1773cf135bd89656131134b98637894dad42f808"
     CheckStatusRequest:
       type: object
-      required:
-        - order_id
-        - merchant_id
-        - signature
       properties:
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        merchant_id:
-          type: integer
-          maxLength: 12
-          description: "Unique ID assigned to the merchant by Fondy."
-          example: 1
-        signature:
-          $ref: '#/components/schemas/Signature'
-        version:
-          type: string
-          maxLength: 10
-          description: "Protocol version. Default is 1.0."
-          example: "1.0"
+        request:
+          type: object
+          required:
+            - order_id
+            - merchant_id
+            - signature
+          properties:
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            merchant_id:
+              type: integer
+              maxLength: 12
+              description: "Unique ID assigned to the merchant by Fondy."
+              example: 1
+            signature:
+              $ref: '#/components/schemas/Signature'
+            version:
+              type: string
+              maxLength: 10
+              description: "Protocol version. Default is 1.0."
+              example: "1.0"
     OrderReversalRequest:
       type: object
-      required:
-        - order_id
-        - merchant_id
-        - signature
-        - amount
-        - currency
       properties:
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        merchant_id:
-          type: integer
-          maxLength: 12
-          description: "Unique ID assigned to the merchant by Fondy."
-          example: 1
-        signature:
-          $ref: '#/components/schemas/Signature'
-        version:
-          type: string
-          maxLength: 10
-          description: "Protocol version. Default is 1.0."
-          example: "1.0"
-        amount:
-          type: integer
-          maxLength: 12
-          description: "Reversal amount in cents without separator (e.g., 1020 for 10 euros and 20 cents)."
-          example: 1020
-        currency:
-          $ref: '#/components/schemas/Currency'
-        comment:
-          type: string
-          maxLength: 1024
-          description: "Merchant's comment on the reversal reason in UTF-8."
-          example: "Customer returned product back."
+        request:
+          type: object
+          required:
+            - order_id
+            - merchant_id
+            - signature
+            - amount
+            - currency
+          properties:
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            merchant_id:
+              type: integer
+              maxLength: 12
+              description: "Unique ID assigned to the merchant by Fondy."
+              example: 1
+            signature:
+              $ref: '#/components/schemas/Signature'
+            version:
+              type: string
+              maxLength: 10
+              description: "Protocol version. Default is 1.0."
+              example: "1.0"
+            amount:
+              type: integer
+              maxLength: 12
+              description: "Reversal amount in cents without separator (e.g., 1020 for 10 euros and 20 cents)."
+              example: 1020
+            currency:
+              $ref: '#/components/schemas/Currency'
+            comment:
+              type: string
+              maxLength: 1024
+              description: "Merchant's comment on the reversal reason in UTF-8."
+              example: "Customer returned product back."
     OrderReversalResponse:
       type: object
       properties:
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        merchant_id:
-          type: integer
-          maxLength: 12
-          description: "Unique ID assigned to the merchant by Fondy."
-          example: 1
-        revers_status:
-          type: string
-          maxLength: 50
-          description: "Reversal processing status."
-          enum: ["created", "declined", "approved"]
-        response_status:
-          type: string
-          maxLength: 50
-          description: "Request processing status. Returns 'success' if validation passes, otherwise 'failure'."
-          example: "success"
-        signature:
-          $ref: '#/components/schemas/Signature'
-        response_code:
-          type: integer
-          maxLength: 4
-          description: "Response decline code, if applicable."
-          example: 1008
-        response_description:
-          type: string
-          maxLength: 1024
-          description: "Description of the response decline reason."
-          example: "Parameter `amount` is mandatory."
+        response:
+          type: object
+          properties:
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            merchant_id:
+              type: integer
+              maxLength: 12
+              description: "Unique ID assigned to the merchant by Fondy."
+              example: 1
+            revers_status:
+              type: string
+              maxLength: 50
+              description: "Reversal processing status."
+              enum: ["created", "declined", "approved"]
+            response_status:
+              type: string
+              maxLength: 50
+              description: "Request processing status. Returns 'success' if validation passes, otherwise 'failure'."
+              example: "success"
+            signature:
+              $ref: '#/components/schemas/Signature'
+            response_code:
+              type: integer
+              maxLength: 4
+              description: "Response decline code, if applicable."
+              example: 1008
+            response_description:
+              type: string
+              maxLength: 1024
+              description: "Description of the response decline reason."
+              example: "Parameter `amount` is mandatory."
     TransactionListRequest:
       type: object
       properties:
-        merchant_id:
-          type: integer
-          maxLength: 12
-          description: "Merchant unique ID, assigned by Fondy during registration."
-          example: 1
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        signature:
-          $ref: '#/components/schemas/Signature'
-      required:
-        - merchant_id
-        - order_id
-        - signature
+        request:
+          type: object
+          properties:
+            merchant_id:
+              type: integer
+              maxLength: 12
+              description: "Merchant unique ID, assigned by Fondy during registration."
+              example: 1
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            signature:
+              $ref: '#/components/schemas/Signature'
+          required:
+            - merchant_id
+            - order_id
+            - signature
     TransactionListResponse:
       type: object
       properties:
@@ -1274,84 +1349,157 @@ components:
                 description: "Response code of the transaction."
                 example: 1000
     CardTokenPurchaseRequest:
-      allOf:
-        - $ref: '#/components/schemas/AcceptPurchaseRequest'
-        - type: object
-          required:
-            - rectoken
+      type: object
+      properties:
+        request:
+          allOf:
+            - $ref: '#/components/schemas/AcceptPurchaseReqData'
+            - type: object
+              required:
+                - rectoken
     CardVerificationRequest:
-      allOf:
-        - $ref: '#/components/schemas/AcceptPurchaseRequest'
-        - type: object
-          required:
-            - verification
-            - verification_type
+      type: object
+      properties:
+        request:
+          allOf:
+            - $ref: '#/components/schemas/AcceptPurchaseReqData'
+            - type: object
+              required:
+                - verification
+                - verification_type
     P2pCreditRequest:
-      allOf:
-        - $ref: '#/components/schemas/AcceptPurchaseRequest'
-        - type: object
-          required:
-            - receiver_card_number
-            - receiver_rectoken
+      type: object
+      properties:
+        request:
+          allOf:
+            - $ref: '#/components/schemas/AcceptPurchaseReqData'
+            - type: object
+              required:
+                - receiver_card_number
+                - receiver_rectoken
     CapturePrePurchaseRequest:
       type: object
       properties:
-        order_id:
-          $ref: '#/components/schemas/OrderId'
-        merchant_id:
-          type: integer
-          description: Unique identifier for the merchant, generated by Fondy.
-          example: 1
-        signature:
-          type: string
-          description: Signature to verify request consistency and authenticity.
-          example: "1773cf135bd89656131134b98637894dad42f808"
-        version:
-          type: string
-          description: Protocol version.
-          default: "1.0"
-        amount:
-          type: integer
-          description: Amount to capture in the smallest unit of currency (e.g., cents).
-          example: 1020
-        currency:
-          type: string
-          description: Currency of the transaction (e.g., USD, EUR, GBP, UAH).
-          example: "USD"
-      required:
-        - order_id
-        - merchant_id
-        - signature
-        - amount
-        - currency
+        request:
+          type: object
+          properties:
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            merchant_id:
+              type: integer
+              description: Unique identifier for the merchant, generated by Fondy.
+              example: 1
+            signature:
+              type: string
+              description: Signature to verify request consistency and authenticity.
+              example: "1773cf135bd89656131134b98637894dad42f808"
+            version:
+              type: string
+              description: Protocol version.
+              default: "1.0"
+            amount:
+              type: integer
+              description: Amount to capture in the smallest unit of currency (e.g., cents).
+              example: 1020
+            currency:
+              type: string
+              description: Currency of the transaction (e.g., USD, EUR, GBP, UAH).
+              example: "USD"
+          required:
+            - order_id
+            - merchant_id
+            - signature
+            - amount
+            - currency
     CapturePrePurchaseResponse:
       type: object
       properties:
         response:
           type: object
           properties:
-            order_id:
-              $ref: '#/components/schemas/OrderId'
-            response_status:
-              type: string
-              description: Processing status, success if request parameters pass validation.
-              example: "success"
-            response_code:
-              type: string
-              description: Code for response status.
-              example: ""
-            capture_status:
-              type: string
-              description: Capture processing status, indicating if the capture was successful or declined.
-              example: "captured"
-            response_description:
-              type: string
-              description: Reason for the response decline if applicable.
-              example: ""
+            response:
+              type: object
+              properties:
+                order_id:
+                  $ref: '#/components/schemas/OrderId'
+                response_status:
+                  type: string
+                  description: Processing status, success if request parameters pass validation.
+                  example: "success"
+                response_code:
+                  type: string
+                  description: Code for response status.
+                  example: ""
+                capture_status:
+                  type: string
+                  description: Capture processing status, indicating if the capture was successful or declined.
+                  example: "captured"
+                response_description:
+                  type: string
+                  description: Reason for the response decline if applicable.
+                  example: ""
+                merchant_id:
+                  type: integer
+                  description: Unique identifier for the merchant.
+                  example: 1
+    SubscriptionManagementRequest:
+      type: object
+      properties:
+        request:
+          type: object
+          required:
+            - merchant_id
+            - order_id
+            - action
+            - signature
+          properties:
             merchant_id:
               type: integer
               description: Unique identifier for the merchant.
-              example: 1
+              example: 1480995
+            order_id:
+              type: string
+              description: Unique identifier for the order associated with the subscription.
+              example: "testpaymenttoken12"
+            action:
+              type: string
+              description: Action to perform on the subscription.
+              enum:
+                - start
+                - stop
+              x-enumDescriptions:
+                start: "Start the subscription, resuming scheduled payments."
+                stop: "Stop the subscription, halting any future scheduled payments."
+              example: "stop"
+            signature:
+              type: string
+              description: "Digital signature for verifying the request. Calculated based on the request parameters."
+              example: "209b6e718d9c976784fff9adc88c0e9b45fcca6c"
+    SubscriptionManagementResponse:
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            response_status:
+              type: string
+              description: Processing status of the request.
+              enum:
+                - success
+                - failure
+              example: "success"
+            status:
+              type: string
+              description: Message indicating the result of the action.
+              example: "Subscription stopped successfully"
+            error_message:
+              type: string
+              description: Description of the error if the request failed.
+              example: "Invalid signature"
+            error_code:
+              type: integer
+              description: Code representing the specific error.
+              example: 2032
   responses:
     ResponseWithInterim:
       description: The response for a successful transaction.
@@ -1363,70 +1511,73 @@ components:
             final:
               summary: "Final Response"
               value:
-                order_id: "ID1234"
-                merchant_id: 1
-                amount: 1020
-                currency: "EUR"
-                order_status: "approved"
-                response_status: "success"
-                signature: "1773cf135bd89656131134b98637894dad42f808"
-                tran_type: "purchase"
-                sender_cell_phone: "+1234567890"
-                sender_account: "customer_account"
-                masked_card: "444444XXXXXX5555"
-                card_bin: 444444
-                card_type: "VISA"
-                rrn: "123456789"
-                approval_code: "654321"
-                response_code: 100
-                response_description: "Transaction approved"
-                reversal_amount: 0
-                settlement_amount: 1020
-                settlement_currency: "EUR"
-                order_time: "21.12.2014 11:21:30"
-                settlement_date: "21.12.2014"
-                eci: 5
-                fee: 10
-                payment_system: "card"
-                sender_email: "customer@example.com"
-                payment_id: 123456789012345
-                actual_amount: 1020
-                actual_currency: "EUR"
-                product_id: "hotel_booking_1234"
-                merchant_data: "custom_data"
-                verification_status: "verified"
-                rectoken: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-                rectoken_lifetime: "01.01.2018 00:00:00"
-                additional_info:
-                  bank_name: "Some bank in US country"
-                  bank_country: "US"
-                  bank_response_code: "decln_1000"
-                  card_product: "DEBIT"
-                  card_category: "CLASSIC"
-                  settlement_fee: 0.2
-                  capture_status: "captured"
-                  client_fee: 0.3
-                  ipaddress_v4: "8.8.8.8"
-                  capture_amount: 200
+                response:
+                  order_id: "ID1234"
+                  merchant_id: 1
+                  amount: 1020
+                  currency: "EUR"
+                  order_status: "approved"
+                  response_status: "success"
+                  signature: "1773cf135bd89656131134b98637894dad42f808"
+                  tran_type: "purchase"
+                  sender_cell_phone: "+1234567890"
+                  sender_account: "customer_account"
+                  masked_card: "444444XXXXXX5555"
+                  card_bin: 444444
                   card_type: "VISA"
-                  reservation_data: null
-                  bank_response_description: "General decline"
-                  transaction_id: 1058755083
-                  timeend: "10.01.2018 11:21:30"
-                  card_number: "4444555566661111"
-                  payment_method: "apple"
+                  rrn: "123456789"
+                  approval_code: "654321"
+                  response_code: 100
+                  response_description: "Transaction approved"
+                  reversal_amount: 0
+                  settlement_amount: 1020
+                  settlement_currency: "EUR"
+                  order_time: "21.12.2014 11:21:30"
+                  settlement_date: "21.12.2014"
+                  eci: 5
+                  fee: 10
+                  payment_system: "card"
+                  sender_email: "customer@example.com"
+                  payment_id: 123456789012345
+                  actual_amount: 1020
+                  actual_currency: "EUR"
+                  product_id: "hotel_booking_1234"
+                  merchant_data: "custom_data"
+                  verification_status: "verified"
+                  rectoken: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                  rectoken_lifetime: "01.01.2018 00:00:00"
+                  additional_info:
+                    bank_name: "Some bank in US country"
+                    bank_country: "US"
+                    bank_response_code: "decln_1000"
+                    card_product: "DEBIT"
+                    card_category: "CLASSIC"
+                    settlement_fee: 0.2
+                    capture_status: "captured"
+                    client_fee: 0.3
+                    ipaddress_v4: "8.8.8.8"
+                    capture_amount: 200
+                    card_type: "VISA"
+                    reservation_data: null
+                    bank_response_description: "General decline"
+                    transaction_id: 1058755083
+                    timeend: "10.01.2018 11:21:30"
+                    card_number: "4444555566661111"
+                    payment_method: "apple"
             interim:
               summary: "Interim Response"
               value:
-                response_status: "success"
-                checkout_url: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
-                payment_id: 123456789012345
+                response:
+                  response_status: "success"
+                  checkout_url: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
+                  payment_id: 123456789012345
             error:
                 summary: "Error Response"
                 value:
-                  response_status: failure
-                  error_message: General decline
-                  error_code: 1000
+                  response:
+                    response_status: failure
+                    error_message: General decline
+                    error_code: 1000
     ResponseWithoutInterim:
       description: The response for a successful transaction.
       content:
@@ -1437,61 +1588,63 @@ components:
             final:
               summary: "Final Response"
               value:
-                order_id: "ID1234"
-                merchant_id: 1
-                amount: 1020
-                currency: "EUR"
-                order_status: "approved"
-                response_status: "success"
-                signature: "1773cf135bd89656131134b98637894dad42f808"
-                tran_type: "purchase"
-                sender_cell_phone: "+1234567890"
-                sender_account: "customer_account"
-                masked_card: "444444XXXXXX5555"
-                card_bin: 444444
-                card_type: "VISA"
-                rrn: "123456789"
-                approval_code: "654321"
-                response_code: 100
-                response_description: "Transaction approved"
-                reversal_amount: 0
-                settlement_amount: 1020
-                settlement_currency: "EUR"
-                order_time: "21.12.2014 11:21:30"
-                settlement_date: "21.12.2014"
-                eci: 5
-                fee: 10
-                payment_system: "card"
-                sender_email: "customer@example.com"
-                payment_id: 123456789012345
-                actual_amount: 1020
-                actual_currency: "EUR"
-                product_id: "hotel_booking_1234"
-                merchant_data: "custom_data"
-                verification_status: "verified"
-                rectoken: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-                rectoken_lifetime: "01.01.2018 00:00:00"
-                additional_info:
-                  bank_name: "Some bank in US country"
-                  bank_country: "US"
-                  bank_response_code: "decln_1000"
-                  card_product: "DEBIT"
-                  card_category: "CLASSIC"
-                  settlement_fee: 0.2
-                  capture_status: "captured"
-                  client_fee: 0.3
-                  ipaddress_v4: "8.8.8.8"
-                  capture_amount: 200
+                response:
+                  order_id: "ID1234"
+                  merchant_id: 1
+                  amount: 1020
+                  currency: "EUR"
+                  order_status: "approved"
+                  response_status: "success"
+                  signature: "1773cf135bd89656131134b98637894dad42f808"
+                  tran_type: "purchase"
+                  sender_cell_phone: "+1234567890"
+                  sender_account: "customer_account"
+                  masked_card: "444444XXXXXX5555"
+                  card_bin: 444444
                   card_type: "VISA"
-                  reservation_data: null
-                  bank_response_description: "General decline"
-                  transaction_id: 1058755083
-                  timeend: "10.01.2018 11:21:30"
-                  card_number: "4444555566661111"
-                  payment_method: "apple"
+                  rrn: "123456789"
+                  approval_code: "654321"
+                  response_code: 100
+                  response_description: "Transaction approved"
+                  reversal_amount: 0
+                  settlement_amount: 1020
+                  settlement_currency: "EUR"
+                  order_time: "21.12.2014 11:21:30"
+                  settlement_date: "21.12.2014"
+                  eci: 5
+                  fee: 10
+                  payment_system: "card"
+                  sender_email: "customer@example.com"
+                  payment_id: 123456789012345
+                  actual_amount: 1020
+                  actual_currency: "EUR"
+                  product_id: "hotel_booking_1234"
+                  merchant_data: "custom_data"
+                  verification_status: "verified"
+                  rectoken: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                  rectoken_lifetime: "01.01.2018 00:00:00"
+                  additional_info:
+                    bank_name: "Some bank in US country"
+                    bank_country: "US"
+                    bank_response_code: "decln_1000"
+                    card_product: "DEBIT"
+                    card_category: "CLASSIC"
+                    settlement_fee: 0.2
+                    capture_status: "captured"
+                    client_fee: 0.3
+                    ipaddress_v4: "8.8.8.8"
+                    capture_amount: 200
+                    card_type: "VISA"
+                    reservation_data: null
+                    bank_response_description: "General decline"
+                    transaction_id: 1058755083
+                    timeend: "10.01.2018 11:21:30"
+                    card_number: "4444555566661111"
+                    payment_method: "apple"
             error:
               summary: "Error Response"
               value:
-                response_status: failure
-                error_message: General decline
-                error_code: 1000
+                response:
+                  response_status: failure
+                  error_message: General decline
+                  error_code: 1000
