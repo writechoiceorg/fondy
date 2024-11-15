@@ -739,7 +739,26 @@ components:
         recurring_data:
           type: string
           format: byte
-          description: Base64-encoded string containing details for recurring payments.
+          description: |
+            A Base64-encoded JSON string that configures the details of a recurring payment plan. When decoded, the JSON object specifies the schedule, amount, and start/end times for the recurring payments. 
+
+            **Decoded JSON Structure:**
+            ```json
+            {
+              "every": 1,
+              "period": "month",
+              "amount": 10000,
+              "start_time": "2024-04-26",
+              "end_time": "2025-04-26"
+            }
+            ```
+
+            - **`every`** *(integer)*: Interval between payments. Defaults to `1` if not provided. Example: `1` represents one period (e.g., one month if `period` is "month").
+            - **`period`** *(string)*: Unit of time for the payment interval. Defaults to `"month"` if not specified.
+              - Accepted Values: `"day"`, `"week"`, `"month"`, `"year"`.
+            - **`amount`** *(integer)*: Payment amount in minor currency units (e.g., cents). Example: `10000` represents $100.00 for currencies with two decimal places.
+            - **`start_time`** *(string)*: Start date for the recurring payments in ISO 8601 format (e.g., `"2024-04-26"`). Defaults to the current date or the calculated start date if not provided.
+            - **`end_time`** *(string)*: End date for the recurring payments in ISO 8601 format. Defaults to the system-defined end date if not provided.
           example: eyJldmVyeSI6MSwicGVyaW9kIjoibW9udGgiLCJhbW91bnQiOjEwMDAwLCJzdGFydF90aW1lIjoiMjAyNC0wNC0yNiJ9
     AcceptPurchaseRequest:
       type: object
@@ -1146,19 +1165,20 @@ components:
             version:
               type: string
               maxLength: 10
-              description: "Protocol version. Default is 1.0."
+              description: "Specifies the protocol version to use for the reversal request. Default is '1.0' for compatibility with the current API structure."
               example: "1.0"
             amount:
               type: integer
               maxLength: 12
-              description: "Reversal amount in cents without separator (e.g., 1020 for 10 euros and 20 cents)."
+              description: >
+                The total amount to be reversed, specified in minor currency units (e.g., cents). For example, 1020 in EUR represents 10 euros and 20 cents. Separators or decimal points aren't allowed.
               example: 1020
             currency:
               $ref: '#/components/schemas/Currency'
             comment:
               type: string
               maxLength: 1024
-              description: "Merchant's comment on the reversal reason in UTF-8."
+              description: A comment provided by the merchant to explain the reason for the reversal. The comment must be in UTF-8 format and should describe the context of the reversal.
               example: "Customer returned product back."
     OrderReversalResponse:
       type: object
@@ -1173,24 +1193,36 @@ components:
             revers_status:
               type: string
               maxLength: 50
-              description: "Reversal processing status."
-              enum: ["created", "declined", "approved"]
+              description: >
+                The status of the reversal processing. Indicates whether the reversal 
+                request has been successfully created, declined, or approved.
+              enum: 
+                - created   # Reversal request has been initiated.
+                - declined  # Reversal request has been declined.
+                - approved  # Reversal request has been approved.
+              example: "approved"
             response_status:
               type: string
               maxLength: 50
-              description: "Request processing status. Returns 'success' if validation passes, otherwise 'failure'."
+              description: >
+                The status of the request processing. Returns `'success'` if the request 
+                validation passes, or `'failure'` if there are errors in the request.
               example: "success"
             signature:
               $ref: '#/components/schemas/Signature'
             response_code:
               type: integer
               maxLength: 4
-              description: "Response decline code, if applicable."
+              description: >
+                A numeric code representing the response outcome. If the request fails, 
+                this field provides a decline code indicating the specific error.
               example: 1008
             response_description:
               type: string
               maxLength: 1024
-              description: "Description of the response decline reason."
+              description: >
+                A detailed description of the response, especially in the case of a decline. 
+                Explains the reason for the failure or any additional details about the request outcome.
               example: "Parameter `amount` is mandatory."
     TransactionListRequest:
       type: object
@@ -1220,112 +1252,112 @@ components:
               verification_code:
                 type: string
                 nullable: true
-                description: "Verification code, if applicable."
+                description: "The verification code associated with the transaction, if applicable. Null if no verification code is used."
                 example: null
               masked_card:
                 type: string
-                description: "Masked card number."
+                description: "Partially masked card number used in the transaction, hiding sensitive digits."
                 example: "408093XXXXXX8221"
               protocol:
                 type: string
-                description: "Protocol used for the transaction."
+                description: "Protocol used for processing the transaction, such as 'safe_charge'."
                 example: "safe_charge"
               pares_status:
                 type: string
                 nullable: true
-                description: "3D Secure Pares status."
+                description: "3D Secure Pares status returned by the issuing bank, if applicable. Null if not used."
                 example: null
               sender_country:
                 type: string
-                description: "Sender's country."
+                description: "Country of the sender based on card or transaction details."
                 example: "US"
               istest:
                 type: string
-                description: "Indicates if the transaction is a test ('Y' or 'N')."
+                description: "Indicates whether the transaction is a test ('Y' for yes, 'N' for no)."
                 example: "N"
               timestart:
                 type: string
                 format: date-time
-                description: "Transaction start time."
-                example: "17.02.2017 13:50:32"
+                description: "Timestamp indicating when the transaction started."
+                example: "2017-02-17T13:50:32Z"
               currency:
                 type: string
-                description: "Transaction currency."
+                description: "Currency in which the transaction was processed, specified in [ISO 4217 format](https://en.wikipedia.org/wiki/ISO_4217)."
                 example: "USD"
               preauth:
                 type: string
-                description: "Indicates if the transaction is preauthorized ('Y' or 'N')."
+                description: "Indicates whether the transaction was preauthorized ('Y' for yes, 'N' for no)."
                 example: "N"
               transaction_status:
                 type: string
-                description: "Current status of the transaction."
+                description: "Current status of the transaction, such as 'approved' or 'declined'."
                 example: "declined"
               duration:
                 type: integer
-                description: "Duration of the transaction in seconds."
+                description: "Duration of the transaction processing in seconds."
                 example: 953
               ip_country:
                 type: string
-                description: "IP country of the sender."
+                description: "Country derived from the sender's IP address."
                 example: "US"
               settlement_amount:
                 type: integer
-                description: "Settlement amount for the transaction."
+                description: "Amount settled for the transaction in minor currency units (e.g., cents)."
                 example: 0
               timeend:
                 type: string
                 format: date-time
-                description: "Transaction end time."
-                example: "17.02.2017 13:50:33"
+                description: "Timestamp indicating when the transaction ended."
+                example: "2017-02-17T13:50:33Z"
               order_id:
                 $ref: '#/components/schemas/OrderId'
               actual_amount:
                 type: number
-                description: "Actual amount involved in the transaction."
+                description: "The actual amount involved in the transaction, in major currency units (e.g., dollars)."
                 example: 33.7
               ipaddress_v4:
                 type: string
-                description: "Sender's IPv4 address."
+                description: "IPv4 address of the sender initiating the transaction."
                 example: "45.56.154.162"
               expire_year:
                 type: string
-                description: "Expiration year of the payment card."
+                description: "Expiration year of the payment card used for the transaction."
                 example: "2019"
               actual_currency:
                 type: string
-                description: "Actual currency of the transaction."
+                description: "Actual currency used for the transaction, specified in ISO 4217 format."
                 example: "USD"
               tran_type:
                 type: string
-                description: "Transaction type (e.g., 'purchase')."
+                description: "Type of transaction, such as 'purchase' or 'refund'."
                 example: "purchase"
               payment_system:
                 type: string
-                description: "Payment system used (e.g., 'card')."
+                description: "Payment system used to process the transaction, such as 'card' or 'paypal'."
                 example: "card"
               merchant_id:
                 $ref: '#/components/schemas/MerchantId'
               response_description:
                 type: string
-                description: "Description of the response or error message."
+                description: "A detailed description of the transaction response or error, if applicable."
                 example: "General decline"
               payment_id:
                 type: integer
-                description: "Unique ID of the payment."
+                description: "Unique identifier assigned to the payment transaction."
                 example: 37877547
               card_type:
                 type: string
-                description: "Type of card used in the transaction."
+                description: "Type of card used for the transaction, such as 'VISA' or 'MASTERCARD'."
                 example: "VISA"
               amount:
                 type: number
-                description: "Transaction amount."
+                description: "Total transaction amount in major currency units (e.g., dollars)."
                 example: 33.7
               sender_email:
                 $ref: '#/components/schemas/SenderEmail'
               response_code:
                 type: integer
-                description: "Response code of the transaction."
+                description: "Numeric response code indicating the outcome of the transaction."
                 example: 1000
     CardTokenPurchaseRequest:
       type: object
@@ -1367,21 +1399,18 @@ components:
             merchant_id:
               $ref: '#/components/schemas/MerchantId'
             signature:
-              type: string
-              description: Signature to verify request consistency and authenticity.
-              example: "1773cf135bd89656131134b98637894dad42f808"
+              $ref: '#/components/schemas/Signature'
             version:
               type: string
-              description: Protocol version.
+              description: "Specifies the protocol version for the request. Defaults to '1.0'."
               default: "1.0"
             amount:
               type: integer
-              description: Amount to capture in the smallest unit of currency (e.g., cents).
+              description: |
+                The amount to capture for the transaction, specified in the smallest unit of the currency (e.g., cents for USD). For example, `1020` represents $10.20.
               example: 1020
             currency:
-              type: string
-              description: Currency of the transaction (e.g., USD, EUR, GBP, UAH).
-              example: "USD"
+              $ref: '#/components/schemas/Currency'
           required:
             - order_id
             - merchant_id
@@ -1401,19 +1430,19 @@ components:
                   $ref: '#/components/schemas/OrderId'
                 response_status:
                   type: string
-                  description: Processing status, success if request parameters pass validation.
+                  description: The processing status of the capture request. Returns `success` if all request parameters pass validation, or other values if issues occur.
                   example: "success"
                 response_code:
                   type: string
-                  description: Code for response status.
+                  description: A code indicating the status of the response. Empty if no issues occur, or contains a specific code for declined or failed captures.
                   example: ""
                 capture_status:
                   type: string
-                  description: Capture processing status, indicating if the capture was successful or declined.
+                  description: The processing status of the capture. Indicates whether the capture was successfully completed (`captured`) or declined (`declined`).
                   example: "captured"
                 response_description:
                   type: string
-                  description: Reason for the response decline if applicable.
+                  description: A message providing additional details about the response. Useful for explaining the reason for declines or other issues, if applicable.
                   example: ""
                 merchant_id:
                   $ref: '#/components/schemas/MerchantId'
@@ -1431,12 +1460,10 @@ components:
             merchant_id:
               $ref: '#/components/schemas/MerchantId'
             order_id:
-              type: string
-              description: Unique identifier for the order associated with the subscription.
-              example: "testpaymenttoken12"
+              $ref: '#/components/schemas/OrderId'
             action:
               type: string
-              description: Action to perform on the subscription.
+              description: Specifies the action to perform on the subscription. Use `start` to resume a subscription, enabling scheduled payments, or `stop` to cancel the subscription, preventing future payments.
               enum:
                 - start
                 - stop
@@ -1445,9 +1472,7 @@ components:
                 stop: "Stop the subscription, halting any future scheduled payments."
               example: "stop"
             signature:
-              type: string
-              description: "Digital signature for verifying the request. Calculated based on the request parameters."
-              example: "209b6e718d9c976784fff9adc88c0e9b45fcca6c"
+              $ref: '#/components/schemas/Signature'
     SubscriptionManagementResponse:
       type: object
       properties:
@@ -1456,22 +1481,24 @@ components:
           properties:
             response_status:
               type: string
-              description: Processing status of the request.
+              description: Indicates whether the request was processed successfully or failed validation. Returns `success` if the action was completed successfully, otherwise `failure`.
               enum:
                 - success
                 - failure
               example: "success"
             status:
               type: string
-              description: Message indicating the result of the action.
+              description: Provides a descriptive message about the outcome of the action, such as confirming the subscription was stopped or started successfully.
               example: "Subscription stopped successfully"
             error_message:
               type: string
-              description: Description of the error if the request failed.
+              nullable: true
+              description: Detailed description of the error, explaining why the request failed. This field is only populated when `response_status` is `failure`.
               example: "Invalid signature"
             error_code:
               type: integer
-              description: Code representing the specific error.
+              nullable: true
+              description: Numeric code representing the specific error that occurred. This field is only populated when `response_status` is `failure`.
               example: 2032
   responses:
     ResponseWithInterim:
