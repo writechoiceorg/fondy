@@ -637,7 +637,7 @@ components:
             A list of allowed payment systems for processing this order, separated by commas or semicolons. If not specified, the default allowed payment systems set in the Fondy merchant portal will be used.
 
             Supported Values:
-              
+
             | Payment system code | Description             |
             |---------------------|-------------------------|
             | `card`              | Visa/MasterCard/Maestro |
@@ -1424,29 +1424,26 @@ components:
         response:
           type: object
           properties:
-            response:
-              type: object
-              properties:
-                order_id:
-                  $ref: '#/components/schemas/OrderId'
-                response_status:
-                  type: string
-                  description: The processing status of the capture request. Returns `success` if all request parameters pass validation, or other values if issues occur.
-                  example: "success"
-                response_code:
-                  type: string
-                  description: A code indicating the status of the response. Empty if no issues occur, or contains a specific code for declined or failed captures.
-                  example: ""
-                capture_status:
-                  type: string
-                  description: The processing status of the capture. Indicates whether the capture was successfully completed (`captured`) or declined (`declined`).
-                  example: "captured"
-                response_description:
-                  type: string
-                  description: A message providing additional details about the response. Useful for explaining the reason for declines or other issues, if applicable.
-                  example: ""
-                merchant_id:
-                  $ref: '#/components/schemas/MerchantId'
+            order_id:
+              $ref: '#/components/schemas/OrderId'
+            response_status:
+              type: string
+              description: The processing status of the capture request. Returns `success` if all request parameters pass validation, or other values if issues occur.
+              example: "success"
+            response_code:
+              type: string
+              description: A code indicating the status of the response. Empty if no issues occur, or contains a specific code for declined or failed captures.
+              example: ""
+            capture_status:
+              type: string
+              description: The processing status of the capture. Indicates whether the capture was successfully completed (`captured`) or declined (`declined`).
+              example: "captured"
+            response_description:
+              type: string
+              description: A message providing additional details about the response. Useful for explaining the reason for declines or other issues, if applicable.
+              example: ""
+            merchant_id:
+              $ref: '#/components/schemas/MerchantId'
     SubscriptionManagementRequest:
       type: object
       properties:
