@@ -637,6 +637,7 @@ components:
             A list of allowed payment systems for processing this order, separated by commas or semicolons. If not specified, the default allowed payment systems set in the Fondy merchant portal will be used.
 
             Supported Values:
+              
             | Payment system code | Description             |
             |---------------------|-------------------------|
             | `card`              | Visa/MasterCard/Maestro |
