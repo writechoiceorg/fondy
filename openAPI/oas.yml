@@ -696,17 +696,17 @@ components:
           default: N
         verification:
           $ref: '#/components/schemas/Verification'
-        verification_type:
-          type: string
-          maxLength: 25
-          description: "Defines the type of card verification applied to the order."
-          enum:
-            - amount  # Hold amount on card
-            - code    # Hold amount and require code entry
-          x-enumDescriptions:
-            amount: "The amount submitted by the merchant will be held on the card."
-            code: "The amount will be held on the card, and the cardholder must enter a 4-character code to pass verification."
-          default: amount
+        # verification_type:
+        #   type: string
+        #   maxLength: 25
+        #   description: "Defines the type of card verification applied to the order."
+        #   enum:
+        #     - amount  # Hold amount on card
+        #     - code    # Hold amount and require code entry
+        #   x-enumDescriptions:
+        #     amount: "The amount submitted by the merchant will be held on the card."
+        #     code: "The amount will be held on the card, and the cardholder must enter a 4-character code to pass verification."
+        #   default: amount
         rectoken:
           type: string
           maxLength: 40
@@ -1378,7 +1378,6 @@ components:
             - type: object
               required:
                 - verification
-                - verification_type
     P2pCreditRequest:
       type: object
       properties:
