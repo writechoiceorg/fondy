@@ -27,7 +27,25 @@ paths:
               $ref: '#/components/schemas/AcceptPurchaseRequest'
       responses:
         '200':
-          $ref: '#/components/responses/ResponseWithInterim'
+          $ref: '#/components/responses/ResponseInterim'
+  /checkout/token:
+    post:
+      tags:
+      - Accept Payment
+      operationId: accept-purchase-payment-token
+      summary: Accept Purchase (Payment Token)
+      description: ""
+      parameters:
+        - $ref: '#/components/parameters/ContentType'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptPurchaseRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/ResponseToken'
   /3dsecure_step1:
     post:
       summary: Enroll Card in 3DSecure Service
@@ -205,7 +223,7 @@ paths:
                     response:
                       response_status: "failure"
                       error_message: "Invalid signature"
-                      error_code: 2032
+                      error_code: "2032"
   /checkout/redirect/:
     post:
       summary: Card Verification
@@ -301,7 +319,7 @@ paths:
                     response:
                       response_status: failure
                       error_message: Order Not Found
-                      error_code: 1018
+                      error_code: "1018"
 components:
   parameters:
     ContentType:
@@ -969,6 +987,22 @@ components:
                   type: string
                   enum: ["apple", "googlepay", "card"]
                   description: "Payment method used."
+    AcceptPurchaseInterimResponse:
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            response_status:
+              type: string
+              example: "success"
+            checkout_url:
+              type: string
+              format: uri
+              example: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
+            payment_id:
+              type: integer
+              example: 123456789012345
     ThreeDSecureStep1Request:
       type: object
       properties:
@@ -1497,7 +1531,40 @@ components:
               nullable: true
               description: Numeric code representing the specific error that occurred. This field is only populated when `response_status` is `failure`.
               example: 2032
+    TokenResponse:
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            token:
+              type: string
+              example: "9f0124be2b72333fb0e809f82c8f7e4eaeb6ec6e"
+            response_status:
+              type: string
+              example: "success"
   responses:
+    ResponseInterim:
+      description: The response for a successful transaction.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AcceptPurchaseInterimResponse'
+          examples:
+            interim:
+              summary: "Success Response"
+              value:
+                response:
+                  response_status: "success"
+                  checkout_url: "https://pay.fondy.eu/checkout?token=e0a5d4f331806d1e2feb80353b4c44bf6751fc8c"
+                  payment_id: 123456789012345
+            error:
+                summary: "Error Response"
+                value:
+                  response:
+                    response_status: failure
+                    error_message: General decline
+                    error_code: "1000"
     ResponseWithInterim:
       description: The response for a successful transaction.
       content:
@@ -1574,7 +1641,7 @@ components:
                   response:
                     response_status: failure
                     error_message: General decline
-                    error_code: 1000
+                    error_code: "1000"
     ResponseWithoutInterim:
       description: The response for a successful transaction.
       content:
@@ -1644,4 +1711,24 @@ components:
                 response:
                   response_status: failure
                   error_message: General decline
-                  error_code: 1000
+                  error_code: "1000"
+    ResponseToken:
+      description: The response for a successful request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TokenResponse'
+          examples:
+            success:
+              summary: "Success Response"
+              value:
+                response:
+                  token: "9f0124be2b72333fb0e809f82c8f7e4eaeb6ec6e"
+                  response_status: "success"
+            error:
+              summary: "Error Response"
+              value:
+                response:
+                  response_status: failure
+                  error_message: Parameter `amount` is mandatory
+                  error_code: "1008"
