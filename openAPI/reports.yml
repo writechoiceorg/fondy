@@ -62,7 +62,7 @@ components:
         report_id:
           type: integer
           maxLength: 12
-          description: "Unique ID of the report. See [list of available reports](https://docs.fondy.eu/en/docs/page/61/#listreport)."
+          description: "Unique ID of the report. See [list of available reports](doc:create-reports)."
           enum:
             - 666
             - 403

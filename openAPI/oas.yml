@@ -337,7 +337,7 @@ components:
   schemas:
     Currency:
       type: string
-      description: Currency for the transaction (e.g., EUR, USD, GBP). Refer to the [Currencies](https://docs.fondy.eu/en/docs/page/27/) page for a full list of available currencies.
+      description: Currency for the transaction (e.g., EUR, USD, GBP). Refer to the [Currencies](doc:supported-currencies) page for a full list of available currencies.
       maxLength: 3
       enum:
         - AED  # U.A.E. Dirham
@@ -495,7 +495,7 @@ components:
     Language:
       type: string
       maxLength: 2
-      description: Specifies the main language displayed to users during the payment process. Refer to the [Language Support](https://docs.fondy.eu/en/docs/page/checkout-language/) page for more details.
+      description: Specifies the main language displayed to users during the payment process. Refer to the [Language Support](doc:checkout-language) page for more details.
       enum:
         - az  # Azərbaycan dili
         - cs  # Čeština
@@ -542,7 +542,7 @@ components:
     Verification:
       type: string
       maxLength: 1
-      description: Indicates whether Fondy should automatically reverse the payment after a successful approval, primarily used for card verification. Refer to the [Verification](/) guide for more information.
+      description: Indicates whether Fondy should automatically reverse the payment after a successful approval, primarily used for card verification. Refer to the [Verification](doc:card-verification-guide) guide for more information.
       enum:
         - Y  # Auto-reverse order
         - N  # Do not auto-reverse order
@@ -564,14 +564,14 @@ components:
     ServerCallbackUrl:
       type: string
       maxLength: 2048
-      description: URL for server-to-server callback post payment. See [Receiving Callbacks](https://docs.fondy.eu/en/docs/page/28/) for more details on callbacks.
+      description: URL for server-to-server callback post payment. See [Receiving Callbacks](doc:callbacks) for more details on callbacks.
       example: "http://site.com/callbackurl"
     Signature:
       type: string
       maxLength: 40
       description: |
         Signature for request verification, generated according to Fondy’s algorithm. Required to verify merchant request consistency and authenticity.
-        Learn how to use Fondy’s algorithm at the [Signature Generation for Request and Response](https://docs.fondy.eu/en/docs/page/3/#chapter-3-5) page.
+        Learn how to use Fondy’s algorithm at the [Signature Generation for Request and Response](doc:signatures) page.
       example: "1773cf135bd89656131134b98637894dad42f808"
     OrderId:
       type: string
